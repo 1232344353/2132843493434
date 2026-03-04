@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const PickListLoadingContext = createContext({
@@ -18,6 +18,94 @@ export function PickListLoadingProvider({ children }: { children: ReactNode }) {
     <PickListLoadingContext.Provider value={{ loading, setLoading }}>
       {children}
     </PickListLoadingContext.Provider>
+  );
+}
+
+const GENERATION_STEPS = [
+  "Fetching event data",
+  "Loading EPA statistics",
+  "Analyzing scouting reports",
+  "Evaluating alliance synergies",
+  "Building ranked list",
+];
+
+// Cumulative ms when each step transition fires
+const STEP_TIMINGS = [5000, 12000, 21000, 32000];
+
+function GeneratingSteps() {
+  const [currentStep, setCurrentStep] = useState(0);
+
+  useEffect(() => {
+    const timers = STEP_TIMINGS.map((delay, i) =>
+      setTimeout(() => setCurrentStep(i + 1), delay)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  // Progress bar width: interpolate between steps
+  const pct = Math.round((currentStep / (GENERATION_STEPS.length - 1)) * 85);
+
+  return (
+    <div className="mt-4 space-y-1">
+      {/* Progress bar */}
+      <div className="mb-4 h-1 w-full overflow-hidden rounded-full bg-white/8">
+        <motion.div
+          className="h-full rounded-full bg-gradient-to-r from-teal-500 via-cyan-400 to-teal-400 shadow-[0_0_12px_-2px_rgba(45,212,191,0.7)]"
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 1.2, ease: "easeOut" }}
+        />
+      </div>
+
+      {GENERATION_STEPS.map((label, i) => {
+        const complete = i < currentStep;
+        const active = i === currentStep;
+        const pending = i > currentStep;
+        return (
+          <motion.div
+            key={label}
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: pending ? 0.28 : 1, x: 0 }}
+            transition={{ duration: 0.28, delay: i * 0.05 }}
+            className="flex items-center gap-2.5 py-0.5"
+          >
+            {complete ? (
+              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-teal-500/20 text-teal-400">
+                <svg viewBox="0 0 12 12" width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="1.5 6.5 4.5 9.5 10.5 2.5" />
+                </svg>
+              </span>
+            ) : active ? (
+              <span className="relative flex h-5 w-5 flex-shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400/35" />
+                <span className="relative inline-flex h-5 w-5 rounded-full bg-teal-400/75 ring-2 ring-teal-400/20" />
+              </span>
+            ) : (
+              <span className="h-5 w-5 flex-shrink-0 rounded-full border border-white/12" />
+            )}
+            <span
+              className={`text-sm transition-colors duration-300 ${
+                complete
+                  ? "text-teal-300/55"
+                  : active
+                  ? "font-medium text-white"
+                  : "text-gray-600"
+              }`}
+            >
+              {label}
+            </span>
+            {active && (
+              <motion.span
+                animate={{ opacity: [1, 0.35, 1] }}
+                transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+                className="text-xs text-gray-500"
+              >
+                processing
+              </motion.span>
+            )}
+          </motion.div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -64,23 +152,32 @@ export function PickListSkeleton() {
       <div className="space-y-6">
         {/* Strategy Summary skeleton */}
         <section className="rounded-2xl dashboard-panel p-6">
-          <div className="flex items-center gap-3">
-            <span className="relative inline-flex h-3.5 w-3.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-purple-400/70" />
-              <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-purple-400" />
+          <div className="flex items-start gap-3">
+            <span className="relative mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center">
+              <motion.svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5 text-teal-400"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.6, repeat: Infinity, ease: "linear" }}
+              >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+              </motion.svg>
             </span>
-            <p className="text-sm font-medium text-gray-200">
-              Generating your alliance pick list...
-            </p>
+            <div>
+              <p className="text-sm font-semibold text-white">
+                Generating your alliance pick list
+              </p>
+              <p className="mt-0.5 text-xs text-gray-500">
+                This typically takes 30–60 seconds depending on scouting data volume.
+              </p>
+            </div>
           </div>
-          <p className="mt-1.5 ml-6.5 text-xs text-gray-500">
-            This may take up to a minute depending on the number of teams.
-          </p>
-          <div className="mt-5 space-y-2.5">
-            <div className="h-3 w-full animate-pulse rounded bg-white/8" />
-            <div className="h-3 w-11/12 animate-pulse rounded bg-white/6" style={{ animationDelay: "100ms" }} />
-            <div className="h-3 w-10/12 animate-pulse rounded bg-white/8" style={{ animationDelay: "200ms" }} />
-          </div>
+          <GeneratingSteps />
         </section>
 
         {/* Ranked Teams skeleton */}
