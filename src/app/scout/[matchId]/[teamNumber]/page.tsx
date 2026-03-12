@@ -148,7 +148,7 @@ export default async function ScoutPage({
               {eventTitle}
             </p>
             <h1 className="text-lg font-bold text-white">
-              {compLabel} &mdash; Team {teamNumber}
+              {compLabel}, Team {teamNumber}
             </h1>
           </div>
           <Link
