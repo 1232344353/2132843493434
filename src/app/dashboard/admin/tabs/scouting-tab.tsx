@@ -251,6 +251,7 @@ export function ScoutingTab({
   const [pitIntakeOptions, setPitIntakeOptions] = useState<FormOptionItem[]>(pitScoutConfig.intakeOptions);
   const [pitScoringRangeOptions, setPitScoringRangeOptions] = useState<FormOptionItem[]>(pitScoutConfig.scoringRangeOptions);
   const [pitClimbOptions, setPitClimbOptions] = useState<string[]>(pitScoutConfig.climbOptions);
+  const [pitFuelOutputOptions, setPitFuelOutputOptions] = useState<string[]>(pitScoutConfig.fuelOutputOptions);
 
   const showStatus = useCallback((msg: string) => {
     setStatus(msg);
@@ -303,6 +304,7 @@ export function ScoutingTab({
       intakeOptions: pitIntakeOptions,
       scoringRangeOptions: pitScoringRangeOptions,
       climbOptions: pitClimbOptions,
+      fuelOutputOptions: pitFuelOutputOptions,
     };
 
     const formData = new FormData();
@@ -486,6 +488,16 @@ export function ScoutingTab({
             items={pitClimbOptions}
             onChange={setPitClimbOptions}
             placeholder="e.g. Level 1"
+          />
+        </div>
+
+        <div className="border-t border-white/5 pt-6">
+          <StringListEditor
+            title="Shooter Output Options"
+            description="Single-select buttons for shooter output volume."
+            items={pitFuelOutputOptions}
+            onChange={setPitFuelOutputOptions}
+            placeholder="e.g. Moderate"
           />
         </div>
 

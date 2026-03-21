@@ -47,7 +47,7 @@ export default async function TeamDetailPage({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id")
+    .select("org_id, display_name")
     .eq("id", user.id)
     .single();
 
@@ -289,6 +289,7 @@ export default async function TeamDetailPage({
               teamNumber={teamNumber}
               orgId={profile.org_id}
               userId={user.id}
+              scoutName={profile.display_name ?? user.email ?? "You"}
               config={pitScoutConfig}
             />
             <TeamAIBriefButton
@@ -376,6 +377,11 @@ export default async function TeamDetailPage({
                 {pitScout.climb_capability === "None" && (
                   <span className="rounded bg-gray-500/15 px-2 py-0.5 text-xs font-medium text-gray-300">
                     No Climb
+                  </span>
+                )}
+                {pitScout.fuel_output && (
+                  <span className="rounded bg-orange-500/15 px-2 py-0.5 text-xs font-medium text-orange-200">
+                    Shooter: {pitScout.fuel_output}
                   </span>
                 )}
                 {(Array.isArray(pitScout.intake_types) ? pitScout.intake_types as string[] : []).map((t) => {

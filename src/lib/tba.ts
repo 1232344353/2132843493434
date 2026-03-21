@@ -15,7 +15,7 @@ async function tbaFetch<T>(path: string): Promise<T> {
       headers: {
         "X-TBA-Auth-Key": apiKey,
       },
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      cache: "no-store",
       signal: controller.signal,
     });
   } catch (error) {

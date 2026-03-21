@@ -32,6 +32,7 @@ export interface PitScoutFormConfig {
   intakeOptions: FormOptionItem[];
   scoringRangeOptions: FormOptionItem[];
   climbOptions: string[];
+  fuelOutputOptions: string[];
 }
 
 const DEFAULT_PIT_SCOUT_FORM_CONFIG: PitScoutFormConfig = {
@@ -46,6 +47,7 @@ const DEFAULT_PIT_SCOUT_FORM_CONFIG: PitScoutFormConfig = {
     { key: "long", label: "Long" },
   ],
   climbOptions: ["None", "Level 1", "Level 2", "Level 3"],
+  fuelOutputOptions: ["Sparse", "Moderate", "Dense"],
 };
 
 export function getDefaultPitScoutFormConfig(): PitScoutFormConfig {
@@ -62,6 +64,7 @@ export function normalizePitScoutFormConfig(value: unknown): PitScoutFormConfig 
     intakeOptions: normalizeFormOptionItems(obj.intakeOptions, defaults.intakeOptions),
     scoringRangeOptions: normalizeFormOptionItems(obj.scoringRangeOptions, defaults.scoringRangeOptions),
     climbOptions: normalizeStringArray(obj.climbOptions, defaults.climbOptions),
+    fuelOutputOptions: normalizeStringArray(obj.fuelOutputOptions, defaults.fuelOutputOptions),
   };
 }
 

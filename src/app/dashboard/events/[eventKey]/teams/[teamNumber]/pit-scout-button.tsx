@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
@@ -12,7 +12,41 @@ interface PitScoutButtonProps {
   teamNumber: number;
   orgId: string;
   userId: string;
+  scoutName: string;
   config: PitScoutFormConfig;
+}
+
+const SECTION_LABEL =
+  "text-[11px] font-semibold uppercase tracking-wider text-gray-500";
+const LEGEND = "text-sm font-medium text-gray-300 mb-2";
+const INPUT =
+  "w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:outline-none";
+const TEXTAREA = `${INPUT} resize-none`;
+
+function ToggleButton({
+  selected,
+  onClick,
+  children,
+  className = "",
+}: {
+  selected: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
+        selected
+          ? "border-teal-500/50 bg-teal-500/15 text-teal-200"
+          : "border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
+      } ${className}`}
+    >
+      {children}
+    </button>
+  );
 }
 
 export function PitScoutButton({
@@ -21,6 +55,7 @@ export function PitScoutButton({
   teamNumber,
   orgId,
   userId,
+  scoutName,
   config,
 }: PitScoutButtonProps) {
   const [open, setOpen] = useState(false);
@@ -39,9 +74,24 @@ export function PitScoutButton({
   const [scoringRanges, setScoringRanges] = useState<string[]>([]);
   const [estimatedCycles, setEstimatedCycles] = useState("");
   const [climbCapability, setClimbCapability] = useState("");
+  const [fuelOutput, setFuelOutput] = useState("");
   const [autoDescription, setAutoDescription] = useState("");
   const [autoFuelScored, setAutoFuelScored] = useState("");
   const [notes, setNotes] = useState("");
+
+  const filledCount = useMemo(() => {
+    let count = 0;
+    if (drivetrain) count++;
+    if (width || length || height) count++;
+    if (intakeTypes.length > 0) count++;
+    if (scoringRanges.length > 0 || estimatedCycles) count++;
+    if (climbCapability) count++;
+    if (fuelOutput) count++;
+    if (autoDescription.trim() || autoFuelScored) count++;
+    if (notes.trim()) count++;
+    return count;
+  }, [drivetrain, width, length, height, intakeTypes, scoringRanges, estimatedCycles, climbCapability, fuelOutput, autoDescription, autoFuelScored, notes]);
+  const totalFields = 8;
 
   // Load existing pit scout data when modal opens
   useEffect(() => {
@@ -75,6 +125,7 @@ export function PitScoutButton({
           setScoringRanges(ranges);
           setEstimatedCycles(data.estimated_cycles?.toString() ?? "");
           setClimbCapability(data.climb_capability ?? "");
+          setFuelOutput(data.fuel_output ?? "");
           setAutoDescription(data.auto_description ?? "");
           setAutoFuelScored(data.auto_fuel_scored?.toString() ?? "");
           setNotes(data.notes ?? "");
@@ -106,6 +157,7 @@ export function PitScoutButton({
       scoring_ranges: scoringRanges.length > 0 ? scoringRanges : null,
       estimated_cycles: estimatedCycles ? parseInt(estimatedCycles, 10) : null,
       climb_capability: climbCapability || null,
+      fuel_output: fuelOutput || null,
       auto_description: autoDescription.trim() || null,
       auto_fuel_scored: autoFuelScored ? parseInt(autoFuelScored, 10) : null,
       notes: notes.trim() || null,
@@ -125,7 +177,7 @@ export function PitScoutButton({
 
     setSaving(false);
     setSaved(true);
-    setTimeout(() => setOpen(false), 800);
+    setTimeout(() => setOpen(false), 1200);
   }
 
   // Escape key
@@ -181,24 +233,32 @@ export function PitScoutButton({
                 className="relative w-full max-w-lg max-h-[85vh] overflow-hidden rounded-2xl border border-white/15 bg-[#0a1020] shadow-[0_18px_80px_rgba(0,0,0,0.6)] flex flex-col"
               >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-                  <div>
-                    <h2 className="text-lg font-semibold text-white">
-                      Pit Scout: Team {teamNumber}
-                    </h2>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Record what you observe in the pits
-                    </p>
+                <div className="border-b border-white/10 px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-white">
+                        Pit Scout: Team {teamNumber}
+                      </h2>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {filledCount}/{totalFields} sections filled
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg p-1.5 text-gray-400 transition hover:bg-white/10 hover:text-white"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                      </svg>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg p-1.5 text-gray-400 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 6 6 18" /><path d="m6 6 12 12" />
-                    </svg>
-                  </button>
+                  <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-teal-500 transition-all duration-300 ease-out"
+                      style={{ width: `${(filledCount / totalFields) * 100}%` }}
+                    />
+                  </div>
                 </div>
 
                 {/* Body */}
@@ -215,166 +275,179 @@ export function PitScoutButton({
                         </div>
                       )}
 
-                      {/* Drivetrain */}
-                      <fieldset>
-                        <legend className="text-sm font-medium text-gray-300 mb-2">Drivetrain</legend>
-                        <div className="grid grid-cols-2 gap-2">
-                          {config.drivetrainOptions.map((opt) => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setDrivetrain(drivetrain === opt ? "" : opt)}
-                              className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                                drivetrain === opt
-                                  ? "border-teal-500/50 bg-teal-500/15 text-teal-200"
-                                  : "border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
-                              }`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                      </fieldset>
+                      {/* ── Robot Build ── */}
+                      <div className="space-y-4">
+                        <h3 className={SECTION_LABEL}>Robot Build</h3>
 
-                      {/* Dimensions */}
-                      <fieldset>
-                        <legend className="text-sm font-medium text-gray-300 mb-2">Robot Dimensions (inches)</legend>
-                        <div className="grid grid-cols-3 gap-3">
-                          {[
-                            { label: "Width", value: width, setter: setWidth },
-                            { label: "Length", value: length, setter: setLength },
-                            { label: "Height", value: height, setter: setHeight },
-                          ].map(({ label, value, setter }) => (
-                            <div key={label}>
-                              <label className="block text-xs text-gray-400 mb-1">{label}</label>
-                              <input
-                                type="number"
-                                inputMode="decimal"
-                                value={value}
-                                onChange={(e) => setter(e.target.value)}
-                                placeholder="0"
-                                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:outline-none"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      </fieldset>
+                        <fieldset>
+                          <legend className={LEGEND}>Drivetrain</legend>
+                          <div className="grid grid-cols-2 gap-2">
+                            {config.drivetrainOptions.map((opt) => (
+                              <ToggleButton
+                                key={opt}
+                                selected={drivetrain === opt}
+                                onClick={() => setDrivetrain(drivetrain === opt ? "" : opt)}
+                              >
+                                {opt}
+                              </ToggleButton>
+                            ))}
+                          </div>
+                        </fieldset>
 
-                      {/* Intake Type */}
-                      <fieldset>
-                        <legend className="text-sm font-medium text-gray-300 mb-2">Intake Type</legend>
-                        <div className="flex gap-2">
-                          {config.intakeOptions.map((opt) => (
-                            <button
-                              key={opt.key}
-                              type="button"
-                              onClick={() => toggleArrayValue(intakeTypes, opt.key, setIntakeTypes)}
-                              className={`rounded-lg border px-3 py-2 text-sm font-medium transition flex-1 ${
-                                intakeTypes.includes(opt.key)
-                                  ? "border-teal-500/50 bg-teal-500/15 text-teal-200"
-                                  : "border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      </fieldset>
+                        <fieldset>
+                          <legend className={LEGEND}>Robot Dimensions (inches)</legend>
+                          <div className="grid grid-cols-3 gap-3">
+                            {[
+                              { label: "Width", value: width, setter: setWidth },
+                              { label: "Length", value: length, setter: setLength },
+                              { label: "Height", value: height, setter: setHeight },
+                            ].map(({ label, value, setter }) => (
+                              <div key={label}>
+                                <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                                <input
+                                  type="number"
+                                  inputMode="decimal"
+                                  value={value}
+                                  onChange={(e) => setter(e.target.value)}
+                                  placeholder="0"
+                                  className={INPUT}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </fieldset>
+                      </div>
 
-                      {/* Scoring Capability */}
-                      <fieldset>
-                        <legend className="text-sm font-medium text-gray-300 mb-2">Scoring Range</legend>
-                        <div className="flex gap-2 mb-3">
-                          {config.scoringRangeOptions.map((opt) => (
-                            <button
-                              key={opt.key}
-                              type="button"
-                              onClick={() => toggleArrayValue(scoringRanges, opt.key, setScoringRanges)}
-                              className={`rounded-lg border px-3 py-2 text-sm font-medium transition flex-1 ${
-                                scoringRanges.includes(opt.key)
-                                  ? "border-teal-500/50 bg-teal-500/15 text-teal-200"
-                                  : "border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
-                              }`}
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-400 mb-1">Estimated cycles per match</label>
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            value={estimatedCycles}
-                            onChange={(e) => setEstimatedCycles(e.target.value)}
-                            placeholder="0"
-                            className="w-full max-w-[120px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:outline-none"
+                      {/* ── Scoring ── */}
+                      <div className="space-y-4 border-t border-white/5 pt-5">
+                        <h3 className={SECTION_LABEL}>Scoring</h3>
+
+                        <fieldset>
+                          <legend className={LEGEND}>Intake Type</legend>
+                          <div className="flex gap-2">
+                            {config.intakeOptions.map((opt) => (
+                              <ToggleButton
+                                key={opt.key}
+                                selected={intakeTypes.includes(opt.key)}
+                                onClick={() => toggleArrayValue(intakeTypes, opt.key, setIntakeTypes)}
+                                className="flex-1"
+                              >
+                                {opt.label}
+                              </ToggleButton>
+                            ))}
+                          </div>
+                        </fieldset>
+
+                        <fieldset>
+                          <legend className={LEGEND}>Scoring Range</legend>
+                          <div className="flex gap-2 mb-3">
+                            {config.scoringRangeOptions.map((opt) => (
+                              <ToggleButton
+                                key={opt.key}
+                                selected={scoringRanges.includes(opt.key)}
+                                onClick={() => toggleArrayValue(scoringRanges, opt.key, setScoringRanges)}
+                                className="flex-1"
+                              >
+                                {opt.label}
+                              </ToggleButton>
+                            ))}
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-400 mb-1">Estimated cycles per match</label>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              value={estimatedCycles}
+                              onChange={(e) => setEstimatedCycles(e.target.value)}
+                              placeholder="0"
+                              className={`${INPUT} max-w-[120px]`}
+                            />
+                          </div>
+                        </fieldset>
+
+                        <fieldset>
+                          <legend className={LEGEND}>Shooter Output</legend>
+                          <div className="grid grid-cols-3 gap-2">
+                            {config.fuelOutputOptions.map((opt) => (
+                              <ToggleButton
+                                key={opt}
+                                selected={fuelOutput === opt}
+                                onClick={() => setFuelOutput(fuelOutput === opt ? "" : opt)}
+                              >
+                                {opt}
+                              </ToggleButton>
+                            ))}
+                          </div>
+                        </fieldset>
+                      </div>
+
+                      {/* ── Endgame ── */}
+                      <div className="space-y-4 border-t border-white/5 pt-5">
+                        <h3 className={SECTION_LABEL}>Endgame</h3>
+
+                        <fieldset>
+                          <legend className={LEGEND}>Climb Capability</legend>
+                          <div className="grid grid-cols-4 gap-2">
+                            {config.climbOptions.map((opt) => (
+                              <ToggleButton
+                                key={opt}
+                                selected={climbCapability === opt}
+                                onClick={() => setClimbCapability(climbCapability === opt ? "" : opt)}
+                              >
+                                {opt}
+                              </ToggleButton>
+                            ))}
+                          </div>
+                        </fieldset>
+                      </div>
+
+                      {/* ── Auto & Notes ── */}
+                      <div className="space-y-4 border-t border-white/5 pt-5">
+                        <h3 className={SECTION_LABEL}>Auto & Notes</h3>
+
+                        <fieldset>
+                          <legend className={LEGEND}>Auto Routine</legend>
+                          <textarea
+                            value={autoDescription}
+                            onChange={(e) => setAutoDescription(e.target.value)}
+                            placeholder="What does their auto do?"
+                            rows={2}
+                            className={TEXTAREA}
                           />
-                        </div>
-                      </fieldset>
+                          <div className="mt-2">
+                            <label className="block text-xs text-gray-400 mb-1">FUEL scored in auto</label>
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              value={autoFuelScored}
+                              onChange={(e) => setAutoFuelScored(e.target.value)}
+                              placeholder="0"
+                              className={`${INPUT} max-w-[120px]`}
+                            />
+                          </div>
+                        </fieldset>
 
-                      {/* Climb */}
-                      <fieldset>
-                        <legend className="text-sm font-medium text-gray-300 mb-2">Climb Capability</legend>
-                        <div className="grid grid-cols-4 gap-2">
-                          {config.climbOptions.map((opt) => (
-                            <button
-                              key={opt}
-                              type="button"
-                              onClick={() => setClimbCapability(climbCapability === opt ? "" : opt)}
-                              className={`rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                                climbCapability === opt
-                                  ? "border-teal-500/50 bg-teal-500/15 text-teal-200"
-                                  : "border-white/10 bg-white/5 text-gray-300 hover:bg-white/10"
-                              }`}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                      </fieldset>
-
-                      {/* Auto */}
-                      <fieldset>
-                        <legend className="text-sm font-medium text-gray-300 mb-2">Auto Routine</legend>
-                        <textarea
-                          value={autoDescription}
-                          onChange={(e) => setAutoDescription(e.target.value)}
-                          placeholder="What does their auto do?"
-                          rows={2}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:outline-none resize-none"
-                        />
-                        <div className="mt-2">
-                          <label className="block text-xs text-gray-400 mb-1">FUEL scored in auto</label>
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            value={autoFuelScored}
-                            onChange={(e) => setAutoFuelScored(e.target.value)}
-                            placeholder="0"
-                            className="w-full max-w-[120px] rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:outline-none"
+                        <fieldset>
+                          <legend className={LEGEND}>What stood out about this team?</legend>
+                          <textarea
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Build quality, driver skill, strategy preferences, known issues..."
+                            rows={3}
+                            className={TEXTAREA}
                           />
-                        </div>
-                      </fieldset>
-
-                      {/* Notes */}
-                      <fieldset>
-                        <legend className="text-sm font-medium text-gray-300 mb-2">Team Strengths / Notes</legend>
-                        <textarea
-                          value={notes}
-                          onChange={(e) => setNotes(e.target.value)}
-                          placeholder="Build quality, driver skill, strategy preferences, known issues..."
-                          rows={3}
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:outline-none resize-none"
-                        />
-                      </fieldset>
+                        </fieldset>
+                      </div>
                     </>
                   )}
                 </div>
 
                 {/* Footer */}
                 {!loading && (
-                  <div className="border-t border-white/10 px-6 py-4 flex items-center justify-end gap-3">
+                  <div className="border-t border-white/10 px-6 py-3.5 flex items-center gap-3">
+                    <p className="text-xs text-gray-500 mr-auto truncate">
+                      Scouting as {scoutName}
+                    </p>
                     <button
                       type="button"
                       onClick={() => setOpen(false)}
@@ -386,13 +459,43 @@ export function PitScoutButton({
                       type="button"
                       onClick={handleSave}
                       disabled={saving || saved}
-                      className={`rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition disabled:opacity-60 ${
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition disabled:opacity-60 ${
                         saved
                           ? "bg-green-600 text-white"
                           : "bg-teal-500 hover:bg-teal-400 text-white"
                       }`}
                     >
-                      {saved ? "Saved!" : saving ? "Saving..." : existingId ? "Update" : "Save"}
+                      {saved ? (
+                        <>
+                          <motion.svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                          >
+                            <motion.path
+                              d="M20 6 9 17l-5-5"
+                              initial={{ pathLength: 0 }}
+                              animate={{ pathLength: 1 }}
+                              transition={{ duration: 0.3, delay: 0.1 }}
+                            />
+                          </motion.svg>
+                          Saved!
+                        </>
+                      ) : saving ? (
+                        <>
+                          <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                          Saving...
+                        </>
+                      ) : existingId ? "Update" : "Save"}
                     </button>
                   </div>
                 )}

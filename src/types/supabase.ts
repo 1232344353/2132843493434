@@ -478,6 +478,7 @@ export type Database = {
           scoring_ranges: Json | null
           estimated_cycles: number | null
           climb_capability: string | null
+          fuel_output: string | null
           auto_description: string | null
           auto_fuel_scored: number | null
           notes: string | null
@@ -498,6 +499,7 @@ export type Database = {
           scoring_ranges?: Json | null
           estimated_cycles?: number | null
           climb_capability?: string | null
+          fuel_output?: string | null
           auto_description?: string | null
           auto_fuel_scored?: number | null
           notes?: string | null
@@ -518,6 +520,7 @@ export type Database = {
           scoring_ranges?: Json | null
           estimated_cycles?: number | null
           climb_capability?: string | null
+          fuel_output?: string | null
           auto_description?: string | null
           auto_fuel_scored?: number | null
           notes?: string | null

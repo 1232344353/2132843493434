@@ -7,6 +7,7 @@ import { EventDataCacher } from "@/components/event-data-cacher";
 import { MatchBriefOverlayButton } from "./match-brief-overlay-button";
 import { PaginatedMatchGrid } from "./paginated-match-grid";
 import { MatchesTour } from "./matches-tour";
+import { SyncEventButton } from "./sync-event-button";
 
 export async function generateMetadata({
   params,
@@ -82,7 +83,7 @@ export default async function MatchListPage({
   // Get user's org for brief check
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id")
+    .select("org_id, role")
     .eq("id", user.id)
     .single();
   if (!profile?.org_id) redirect("/join");
@@ -342,9 +343,18 @@ export default async function MatchListPage({
           )}
 
           {(!matches || matches.length === 0) && (
-            <p className="text-center text-sm text-gray-400 py-8">
-              No matches found. Sync the event first.
-            </p>
+            <div className="flex flex-col items-center gap-4 py-12">
+              <p className="text-center text-sm text-gray-400">
+                No matches found. Sync the event to pull matches from TBA.
+              </p>
+              {profile?.role === "captain" ? (
+                <SyncEventButton eventKey={eventKey} />
+              ) : (
+                <p className="text-center text-xs text-gray-500">
+                  Ask a captain to sync this event.
+                </p>
+              )}
+            </div>
           )}
         </div>
       </main>
