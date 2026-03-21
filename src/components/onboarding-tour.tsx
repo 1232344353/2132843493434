@@ -259,6 +259,7 @@ export function OnboardingTour({
         role="dialog"
         aria-modal="true"
         aria-label="Onboarding tour"
+        data-lenis-prevent
         className="fixed z-[10000] w-[340px] max-h-[calc(100vh-32px)] max-w-[calc(100vw-32px)] overflow-y-auto rounded-2xl border border-white/15 bg-gray-950/95 p-5 shadow-2xl backdrop-blur-lg transition-all duration-300"
         style={{
           top: position.top,

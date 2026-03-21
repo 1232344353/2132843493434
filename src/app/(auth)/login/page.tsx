@@ -53,6 +53,11 @@ export default function LoginPage() {
             <p className="mt-2 text-sm text-gray-400">
               We sent a magic link to your email. Click the link to sign in.
             </p>
+            <p className="mt-3 text-xs leading-relaxed text-gray-500">
+              Didn&apos;t get it? Check your spam folder. Some school or
+              organization email servers block sign-in links. If that
+              happens, try a personal email (Gmail, Outlook, etc.) instead.
+            </p>
             <button
               onClick={() => { setSent(false); setLoading(false); }}
               className="mt-6 text-sm font-medium text-teal-400 transition hover:text-teal-300"

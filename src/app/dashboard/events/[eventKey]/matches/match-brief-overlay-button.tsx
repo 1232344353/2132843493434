@@ -245,7 +245,7 @@ export function MatchBriefOverlayButton({
             )}
 
             {!fetching && !loading && brief && (
-              <div className="mt-4 max-h-[72vh] space-y-5 overflow-y-auto pr-1">
+              <div data-lenis-prevent className="mt-4 max-h-[72vh] space-y-5 overflow-y-auto pr-1">
                 <motion.div
                   className="rounded-2xl dashboard-panel p-5"
                   {...(freshlyGenerated ? { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.3, delay: 0.05 } } : {})}

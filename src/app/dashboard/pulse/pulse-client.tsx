@@ -702,7 +702,7 @@ export function PulseClient({
           </div>
         </div>
 
-        <div className="mt-4 h-[52vh] min-h-[320px] max-h-[620px] overflow-y-auto pr-2">
+        <div data-lenis-prevent className="mt-4 h-[52vh] min-h-[320px] max-h-[620px] overflow-y-auto pr-2">
           <div className="space-y-2">
             {loadError && (
               <div className="rounded-xl border border-teal-400/30 bg-teal-500/10 p-3 text-xs text-teal-200">

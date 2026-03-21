@@ -87,9 +87,8 @@ export function ConfirmDialog({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 360, damping: 28, mass: 0.8 }}
-            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/15 bg-[#0a1020]/95 p-6 shadow-[0_18px_80px_rgba(0,0,0,0.6)]"
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/15 bg-[#0a1020] p-6 shadow-[0_18px_80px_rgba(0,0,0,0.6)]"
           >
-            <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-cyan-300/18 to-transparent" />
             <div className="relative flex items-start gap-4">
               <motion.div
                 initial={{ scale: 0.82, rotate: -8, opacity: 0.7 }}

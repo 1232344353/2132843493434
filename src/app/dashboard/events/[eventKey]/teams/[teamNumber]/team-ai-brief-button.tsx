@@ -474,7 +474,7 @@ export function TeamAIBriefButton({
                 {!loading && !error && brief && (
                   <motion.div
                     key="brief"
-                    className="max-h-[55vh] overflow-y-auto pr-2"
+                    className="max-h-[55vh] overflow-y-auto pr-2" data-lenis-prevent
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -6 }}

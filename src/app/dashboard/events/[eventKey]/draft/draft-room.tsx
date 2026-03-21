@@ -984,7 +984,7 @@ export function DraftRoom({
             )}
 
             {pickList && bestAvailable.length > 0 && (
-              <div className="max-h-[22rem] space-y-2 overflow-y-auto pr-1">
+              <div data-lenis-prevent className="max-h-[22rem] space-y-2 overflow-y-auto pr-1">
                 {bestAvailable.map((team, i) => (
                   <div
                     key={team.teamNumber}
@@ -1119,7 +1119,7 @@ export function DraftRoom({
                 Drop anywhere in this box to return teams to the pool.
               </p>
 
-              <div className="max-h-96 space-y-1 overflow-y-auto pr-1">
+              <div data-lenis-prevent className="max-h-96 space-y-1 overflow-y-auto pr-1">
                 {availablePool.map((team) => (
                   <PoolTeamChip
                     key={team}
@@ -1145,7 +1145,7 @@ export function DraftRoom({
           {state.history.length > 0 && (
             <div className="rounded-2xl dashboard-panel p-5 space-y-2">
               <h3 className="text-sm font-semibold text-white">Pick History</h3>
-              <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
+              <div data-lenis-prevent className="max-h-48 space-y-1 overflow-y-auto pr-1">
                 {[...state.history].reverse().map((entry, i) => (
                   <div key={state.history.length - 1 - i} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-1.5 text-xs">
                     <span className="text-gray-300">
@@ -1261,7 +1261,7 @@ export function DraftRoom({
                 Drop anywhere in this box to decline a team.
               </p>
 
-              <div className="max-h-80 space-y-1 overflow-y-auto pr-1">
+              <div data-lenis-prevent className="max-h-80 space-y-1 overflow-y-auto pr-1">
                 {state.declined.map((team) => (
                   <PoolTeamChip
                     key={team}

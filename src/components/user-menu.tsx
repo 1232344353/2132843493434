@@ -81,6 +81,7 @@ export function UserMenu({ name, email, isStaff }: UserMenuProps) {
       {open && (
         <div
           role="menu"
+          data-lenis-prevent
           className="absolute right-0 mt-2 w-72 max-h-[calc(100vh-120px)] max-w-[calc(100vw-24px)] overflow-hidden overflow-y-auto rounded-xl border border-white/10 bg-gray-950/95 text-white shadow-2xl backdrop-blur"
         >
           <div className="border-b border-white/10 px-5 py-4">

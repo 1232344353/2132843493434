@@ -115,7 +115,7 @@ export function StrategyChat({
       )}
 
       <div className={`rounded-2xl dashboard-panel ${panelPadding} space-y-2.5`}>
-        <div className={compact ? "max-h-64 overflow-y-auto space-y-2" : "space-y-3"}>
+        <div data-lenis-prevent className={compact ? "max-h-64 overflow-y-auto space-y-2" : "space-y-3"}>
           {messages.map((message, index) => (
             <div
               key={index}

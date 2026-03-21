@@ -626,6 +626,7 @@ export function ChatSidebar({ open, onClose, eventKey, eventName, userName }: Ch
             <div
               ref={scrollContainerRef}
               onScroll={handleScroll}
+              data-lenis-prevent
               className="relative flex-1 overflow-y-auto px-5 py-4 space-y-4"
             >
               {messages.map((message, index) => (
