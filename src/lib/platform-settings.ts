@@ -25,6 +25,46 @@ export interface ScoutingFormConfig {
   ratingFields: FormOptionItem[];
 }
 
+/* ── Pit Scout Form Config ────────────────────────────────────── */
+
+export interface PitScoutFormConfig {
+  drivetrainOptions: string[];
+  intakeOptions: FormOptionItem[];
+  scoringRangeOptions: FormOptionItem[];
+  climbOptions: string[];
+}
+
+const DEFAULT_PIT_SCOUT_FORM_CONFIG: PitScoutFormConfig = {
+  drivetrainOptions: ["Swerve", "Tank / West Coast", "Mecanum", "Other"],
+  intakeOptions: [
+    { key: "ground", label: "Ground" },
+    { key: "human_player", label: "Human Player Station" },
+  ],
+  scoringRangeOptions: [
+    { key: "close", label: "Close" },
+    { key: "mid", label: "Mid" },
+    { key: "long", label: "Long" },
+  ],
+  climbOptions: ["None", "Level 1", "Level 2", "Level 3"],
+};
+
+export function getDefaultPitScoutFormConfig(): PitScoutFormConfig {
+  return JSON.parse(JSON.stringify(DEFAULT_PIT_SCOUT_FORM_CONFIG));
+}
+
+export function normalizePitScoutFormConfig(value: unknown): PitScoutFormConfig {
+  const defaults = getDefaultPitScoutFormConfig();
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaults;
+
+  const obj = value as Record<string, unknown>;
+  return {
+    drivetrainOptions: normalizeStringArray(obj.drivetrainOptions, defaults.drivetrainOptions),
+    intakeOptions: normalizeFormOptionItems(obj.intakeOptions, defaults.intakeOptions),
+    scoringRangeOptions: normalizeFormOptionItems(obj.scoringRangeOptions, defaults.scoringRangeOptions),
+    climbOptions: normalizeStringArray(obj.climbOptions, defaults.climbOptions),
+  };
+}
+
 const DEFAULT_SCOUTING_FORM_CONFIG: ScoutingFormConfig = {
   intakeOptions: [
     { key: "depot", label: "Ground Intake" },
@@ -210,6 +250,7 @@ type PlatformQuestionSettings = {
   questions: string[];
   aiPromptLimits: TeamAiPromptLimits;
   formConfig: ScoutingFormConfig;
+  pitScoutConfig: PitScoutFormConfig;
 };
 
 function parseQuestionSettingsPayload(value: unknown): PlatformQuestionSettings {
@@ -217,6 +258,7 @@ function parseQuestionSettingsPayload(value: unknown): PlatformQuestionSettings 
     questions: getDefaultScoutingAbilityQuestions(),
     aiPromptLimits: getDefaultTeamAiPromptLimits(),
     formConfig: getDefaultScoutingFormConfig(),
+    pitScoutConfig: getDefaultPitScoutFormConfig(),
   };
 
   if (!value) return defaults;
@@ -226,6 +268,7 @@ function parseQuestionSettingsPayload(value: unknown): PlatformQuestionSettings 
       questions: normalizeScoutingAbilityQuestions(value),
       aiPromptLimits: defaults.aiPromptLimits,
       formConfig: defaults.formConfig,
+      pitScoutConfig: defaults.pitScoutConfig,
     };
   }
 
@@ -238,11 +281,13 @@ function parseQuestionSettingsPayload(value: unknown): PlatformQuestionSettings 
     obj.scouting_ability_questions;
   const aiLimitSource = obj.aiPromptLimits ?? obj.ai_prompt_limits;
   const formConfigSource = obj.formConfig ?? obj.form_config;
+  const pitScoutConfigSource = obj.pitScoutConfig ?? obj.pit_scout_config;
 
   return {
     questions: normalizeScoutingAbilityQuestions(questionSource),
     aiPromptLimits: normalizeTeamAiPromptLimits(aiLimitSource),
     formConfig: normalizeScoutingFormConfig(formConfigSource),
+    pitScoutConfig: normalizePitScoutFormConfig(pitScoutConfigSource),
   };
 }
 
@@ -250,18 +295,24 @@ export function serializeQuestionSettingsPayload({
   questions,
   aiPromptLimits,
   formConfig,
+  pitScoutConfig,
 }: {
   questions: string[];
   aiPromptLimits: TeamAiPromptLimits;
   formConfig?: ScoutingFormConfig;
+  pitScoutConfig?: PitScoutFormConfig;
 }): Json {
   const normalized = formConfig
     ? normalizeScoutingFormConfig(formConfig)
     : getDefaultScoutingFormConfig();
+  const normalizedPit = pitScoutConfig
+    ? normalizePitScoutFormConfig(pitScoutConfig)
+    : getDefaultPitScoutFormConfig();
   return {
     questions: normalizeScoutingAbilityQuestions(questions),
     aiPromptLimits: normalizeTeamAiPromptLimits(aiPromptLimits) as unknown as Json,
     formConfig: JSON.parse(JSON.stringify(normalized)) as Json,
+    pitScoutConfig: JSON.parse(JSON.stringify(normalizedPit)) as Json,
   } as Json;
 }
 
@@ -340,4 +391,21 @@ export async function getScoutingFormConfig(
 
   return parseQuestionSettingsPayload(data?.scouting_ability_questions)
     .formConfig;
+}
+
+export async function getPitScoutFormConfig(
+  supabase: SupabaseClient<Database>
+): Promise<PitScoutFormConfig> {
+  const fallback = getDefaultPitScoutFormConfig();
+
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .select("scouting_ability_questions")
+    .eq("id", 1)
+    .maybeSingle();
+
+  if (error) return fallback;
+
+  return parseQuestionSettingsPayload(data?.scouting_ability_questions)
+    .pitScoutConfig;
 }

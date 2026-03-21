@@ -8,11 +8,14 @@ import {
   getDefaultEventSyncMinYear,
   getDefaultTeamAiPromptLimits,
   getDefaultScoutingFormConfig,
+  getDefaultPitScoutFormConfig,
   normalizeScoutingAbilityQuestions,
   normalizeTeamAiPromptLimits,
   normalizeScoutingFormConfig,
+  normalizePitScoutFormConfig,
   serializeQuestionSettingsPayload,
   type ScoutingFormConfig,
+  type PitScoutFormConfig,
 } from "@/lib/platform-settings";
 import { resetRateLimitPrefix, TEAM_AI_RATE_LIMIT_PREFIX } from "@/lib/rate-limit";
 
@@ -334,13 +337,15 @@ function extractQuestionSettings(raw: unknown): {
   questions: string[];
   aiPromptLimits: { free: number; supporter: number };
   formConfig: ScoutingFormConfig;
+  pitScoutConfig: PitScoutFormConfig;
 } {
   const defaultQuestions = normalizeScoutingAbilityQuestions([]);
   const defaultLimits = getDefaultTeamAiPromptLimits();
   const defaultFormConfig = getDefaultScoutingFormConfig();
+  const defaultPitScout = getDefaultPitScoutFormConfig();
 
   if (!raw) {
-    return { questions: defaultQuestions, aiPromptLimits: defaultLimits, formConfig: defaultFormConfig };
+    return { questions: defaultQuestions, aiPromptLimits: defaultLimits, formConfig: defaultFormConfig, pitScoutConfig: defaultPitScout };
   }
 
   if (Array.isArray(raw)) {
@@ -348,11 +353,12 @@ function extractQuestionSettings(raw: unknown): {
       questions: normalizeScoutingAbilityQuestions(raw),
       aiPromptLimits: defaultLimits,
       formConfig: defaultFormConfig,
+      pitScoutConfig: defaultPitScout,
     };
   }
 
   if (typeof raw !== "object") {
-    return { questions: defaultQuestions, aiPromptLimits: defaultLimits, formConfig: defaultFormConfig };
+    return { questions: defaultQuestions, aiPromptLimits: defaultLimits, formConfig: defaultFormConfig, pitScoutConfig: defaultPitScout };
   }
 
   const obj = raw as Record<string, unknown>;
@@ -362,11 +368,13 @@ function extractQuestionSettings(raw: unknown): {
     obj.scouting_ability_questions;
   const aiLimitsSource = obj.aiPromptLimits ?? obj.ai_prompt_limits;
   const formConfigSource = obj.formConfig ?? obj.form_config;
+  const pitScoutConfigSource = obj.pitScoutConfig ?? obj.pit_scout_config;
 
   return {
     questions: normalizeScoutingAbilityQuestions(questionSource),
     aiPromptLimits: normalizeTeamAiPromptLimits(aiLimitsSource),
     formConfig: normalizeScoutingFormConfig(formConfigSource),
+    pitScoutConfig: normalizePitScoutFormConfig(pitScoutConfigSource),
   };
 }
 
@@ -463,7 +471,7 @@ export async function updateScoutingAbilityQuestions(formData: FormData) {
 
   const eventSyncMinYear =
     current?.event_sync_min_year ?? getDefaultEventSyncMinYear();
-  const { aiPromptLimits, formConfig } = extractQuestionSettings(
+  const { aiPromptLimits, formConfig, pitScoutConfig } = extractQuestionSettings(
     current?.scouting_ability_questions
   );
 
@@ -557,7 +565,7 @@ export async function updateTeamAiPromptLimits(formData: FormData) {
 
   const eventSyncMinYear =
     current?.event_sync_min_year ?? getDefaultEventSyncMinYear();
-  const { questions, formConfig } = extractQuestionSettings(current?.scouting_ability_questions);
+  const { questions, formConfig, pitScoutConfig } = extractQuestionSettings(current?.scouting_ability_questions);
 
   const { error } = await admin
     .from("platform_settings")
@@ -572,6 +580,7 @@ export async function updateTeamAiPromptLimits(formData: FormData) {
             supporter: supporterParsed,
           },
           formConfig,
+          pitScoutConfig,
         }),
         updated_at: new Date().toISOString(),
       },
@@ -637,7 +646,7 @@ export async function updateScoutingFormConfig(formData: FormData) {
 
   const eventSyncMinYear =
     current?.event_sync_min_year ?? getDefaultEventSyncMinYear();
-  const { questions, aiPromptLimits } = extractQuestionSettings(
+  const { questions, aiPromptLimits, pitScoutConfig: existingPitScout } = extractQuestionSettings(
     current?.scouting_ability_questions
   );
 
@@ -651,6 +660,7 @@ export async function updateScoutingFormConfig(formData: FormData) {
           questions,
           aiPromptLimits,
           formConfig,
+          pitScoutConfig: existingPitScout,
         }),
         updated_at: new Date().toISOString(),
       },
@@ -669,6 +679,70 @@ export async function updateScoutingFormConfig(formData: FormData) {
 
   revalidatePath("/dashboard/admin");
   revalidatePath("/scout");
+  return { success: true } as const;
+}
+
+export async function updatePitScoutFormConfig(formData: FormData) {
+  const ctx = await requireStaff();
+  if ("error" in ctx) return { error: ctx.error } as const;
+
+  const raw = (formData.get("pitScoutConfigJson") as string | null)?.trim();
+  if (!raw) {
+    return { error: "Missing pit scout config payload." } as const;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { error: "Invalid pit scout config payload." } as const;
+  }
+
+  const pitScoutConfig = normalizePitScoutFormConfig(parsed);
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceRoleKey) {
+    return { error: "SUPABASE_SERVICE_ROLE_KEY is missing." } as const;
+  }
+
+  const admin = createAdminClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey
+  );
+
+  const { data: current } = await admin
+    .from("platform_settings")
+    .select("event_sync_min_year, scouting_ability_questions")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const eventSyncMinYear =
+    current?.event_sync_min_year ?? getDefaultEventSyncMinYear();
+  const { questions, aiPromptLimits, formConfig } = extractQuestionSettings(
+    current?.scouting_ability_questions
+  );
+
+  const { error } = await admin
+    .from("platform_settings")
+    .upsert(
+      {
+        id: 1,
+        event_sync_min_year: eventSyncMinYear,
+        scouting_ability_questions: serializeQuestionSettingsPayload({
+          questions,
+          aiPromptLimits,
+          formConfig,
+          pitScoutConfig,
+        }),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "id" }
+    );
+
+  if (error) {
+    return { error: error.message } as const;
+  }
+
+  revalidatePath("/dashboard/admin");
   return { success: true } as const;
 }
 

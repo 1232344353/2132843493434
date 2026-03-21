@@ -4,10 +4,12 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/navbar";
 import { TeamAIBriefButton } from "./team-ai-brief-button";
+import { PitScoutButton } from "./pit-scout-button";
 import { TeamDetailCharts } from "./team-detail-charts";
 import { ExportCsvButton } from "@/components/export-csv-button";
-import { getScoutingFormConfig, buildLabelMap, resolveLabels } from "@/lib/platform-settings";
+import { getScoutingFormConfig, getPitScoutFormConfig, buildLabelMap, resolveLabels } from "@/lib/platform-settings";
 import { RealtimeScoutingSection } from "./realtime-scouting-section";
+
 
 export async function generateMetadata({
   params,
@@ -153,7 +155,10 @@ export default async function TeamDetailPage({
   }
 
   // Fetch form config for label resolution
-  const formConfig = await getScoutingFormConfig(supabase);
+  const [formConfig, pitScoutConfig] = await Promise.all([
+    getScoutingFormConfig(supabase),
+    getPitScoutFormConfig(supabase),
+  ]);
   const intakeLabelMap = buildLabelMap(formConfig.intakeOptions);
   const climbLabelMap = buildLabelMap(formConfig.climbLevelOptions);
   const shootingLabelMap = buildLabelMap(formConfig.shootingRangeOptions);
@@ -237,6 +242,15 @@ export default async function TeamDetailPage({
     return "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
   }
 
+  // Get pit scout entry for this team
+  const { data: pitScout } = await supabase
+    .from("pit_scout_entries")
+    .select("*, profiles(display_name)")
+    .eq("org_id", profile.org_id)
+    .eq("event_id", event.id)
+    .eq("team_number", teamNumber)
+    .maybeSingle();
+
   const eventTitle = event.year ? `${event.year} ${event.name}` : event.name;
 
   return (
@@ -269,6 +283,14 @@ export default async function TeamDetailPage({
             )}
           </div>
           <div className="flex gap-2">
+            <PitScoutButton
+              eventId={event.id}
+              eventKey={eventKey}
+              teamNumber={teamNumber}
+              orgId={profile.org_id}
+              userId={user.id}
+              config={pitScoutConfig}
+            />
             <TeamAIBriefButton
               eventKey={eventKey}
               teamNumber={teamNumber}
@@ -328,6 +350,102 @@ export default async function TeamDetailPage({
             </p>
           )}
         </div>
+
+        {/* Pit Scout Data */}
+        {pitScout && (
+          <div className="rounded-2xl dashboard-panel p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white">Pit Scout</h2>
+              <span className="text-xs text-gray-500">
+                by {(pitScout.profiles as { display_name: string } | null)?.display_name ?? "Unknown"}
+              </span>
+            </div>
+            <div className="space-y-3">
+              {/* Tags row */}
+              <div className="flex flex-wrap gap-1.5">
+                {pitScout.drivetrain && (
+                  <span className="rounded bg-teal-500/15 px-2 py-0.5 text-xs font-medium text-teal-200">
+                    {pitScout.drivetrain}
+                  </span>
+                )}
+                {pitScout.climb_capability && pitScout.climb_capability !== "None" && (
+                  <span className="rounded bg-purple-500/15 px-2 py-0.5 text-xs font-medium text-purple-200">
+                    Climb: {pitScout.climb_capability}
+                  </span>
+                )}
+                {pitScout.climb_capability === "None" && (
+                  <span className="rounded bg-gray-500/15 px-2 py-0.5 text-xs font-medium text-gray-300">
+                    No Climb
+                  </span>
+                )}
+                {(Array.isArray(pitScout.intake_types) ? pitScout.intake_types as string[] : []).map((t) => {
+                  const label = pitScoutConfig.intakeOptions.find((o) => o.key === t)?.label ?? t;
+                  return (
+                    <span key={t} className="rounded bg-cyan-500/15 px-2 py-0.5 text-xs font-medium text-cyan-200">
+                      {label}
+                    </span>
+                  );
+                })}
+                {(Array.isArray(pitScout.scoring_ranges) ? pitScout.scoring_ranges as string[] : []).map((r) => (
+                  <span key={r} className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-200 capitalize">
+                    {r} range
+                  </span>
+                ))}
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {pitScout.width_inches != null && (
+                  <div className="rounded-2xl bg-white/5 p-3 text-center">
+                    <p className="text-xs text-gray-400">Width</p>
+                    <p className="text-sm font-semibold text-white">{pitScout.width_inches}&quot;</p>
+                  </div>
+                )}
+                {pitScout.length_inches != null && (
+                  <div className="rounded-2xl bg-white/5 p-3 text-center">
+                    <p className="text-xs text-gray-400">Length</p>
+                    <p className="text-sm font-semibold text-white">{pitScout.length_inches}&quot;</p>
+                  </div>
+                )}
+                {pitScout.height_inches != null && (
+                  <div className="rounded-2xl bg-white/5 p-3 text-center">
+                    <p className="text-xs text-gray-400">Height</p>
+                    <p className="text-sm font-semibold text-white">{pitScout.height_inches}&quot;</p>
+                  </div>
+                )}
+                {pitScout.estimated_cycles != null && (
+                  <div className="rounded-2xl bg-white/5 p-3 text-center">
+                    <p className="text-xs text-gray-400">Est. Cycles</p>
+                    <p className="text-sm font-semibold text-white">{pitScout.estimated_cycles}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Auto info */}
+              {(pitScout.auto_description || pitScout.auto_fuel_scored != null) && (
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-xs font-medium text-gray-400 mb-1">Auto Routine</p>
+                  {pitScout.auto_description && (
+                    <p className="text-sm text-gray-200">{pitScout.auto_description}</p>
+                  )}
+                  {pitScout.auto_fuel_scored != null && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      FUEL in auto: <span className="font-semibold text-white">{pitScout.auto_fuel_scored}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Notes */}
+              {pitScout.notes && (
+                <div className="rounded-xl bg-white/5 p-3">
+                  <p className="text-xs font-medium text-gray-400 mb-1">Notes</p>
+                  <p className="text-sm text-gray-200">{pitScout.notes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Aggregated Scouting Summary */}
         <div className="rounded-2xl dashboard-panel p-6">

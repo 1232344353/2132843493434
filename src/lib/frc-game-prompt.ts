@@ -1,10 +1,11 @@
 export function buildFrcGamePrompt(year: number | null | undefined): string {
   if (year === 2026) {
     return `Season context (FRC 2026: REBUILT, official manual-aligned summary):
-- Core objective: score FUEL in your HUB, manage active/inactive HUB windows during TELEOP, and climb the TOWER for endgame value.
+- Core objective: score FUEL in your HUB, manage active/inactive HUB windows during TELEOP, and earn endgame points through TOWER climbing and/or END GAME FUEL scoring.
 - MATCH flow: AUTO (20s), then TELEOP (2:20) with TRANSITION SHIFT (10s), SHIFT 1-4 (25s each), then END GAME (30s).
 - HUB logic: both HUBS are active in AUTO, TRANSITION SHIFT, and END GAME. During SHIFT 1-4, one HUB is active and the other inactive (driven by AUTO FUEL result).
 - 2026 scoring highlights: active HUB FUEL = 1 point (AUTO and TELEOP), inactive HUB FUEL = 0 points. TOWER points: LEVEL 1 = 15 (AUTO) / 10 (TELEOP), LEVEL 2 = 20 (TELEOP), LEVEL 3 = 30 (TELEOP).
+- END GAME scoring: during the 30-second END GAME window, robots can score FUEL (both HUBS are active) AND/OR attempt TOWER climbs. Endgame EPA reflects BOTH FUEL scored during the END GAME period and TOWER climb points. Many teams focus on FUEL scoring during END GAME rather than climbing. Do not assume endgame EPA comes solely from climbing.
 - 2026 RP framework: ENERGIZED RP (100 active HUB FUEL at Regional/District events; 140 at District Championship/Championship), SUPERCHARGED RP (360 active HUB FUEL at Regional/District events; 510 at District Championship/Championship), TRAVERSAL RP (50 TOWER points at Regional/District events; 70 at District Championship/Championship).
 
 Terminology rules:
@@ -13,7 +14,8 @@ Terminology rules:
 
 Reliability guardrails:
 - Do not invent mechanics, point values, RP thresholds, or game-state transitions beyond this summary and the provided input data.
-- If team-specific evidence is limited, use neutral phrasing like "auto scoring output", "teleop throughput", "hub-window management", and "endgame climb reliability".
+- If team-specific evidence is limited, use neutral phrasing like "auto scoring output", "teleop throughput", "hub-window management", and "endgame contribution".
+- Do not assume a team's endgame points come from climbing. Endgame EPA includes both TOWER climb points and FUEL scored during the END GAME window. Without specific scouting data confirming a climb, refer to "endgame contribution" or "endgame output" rather than "climb reliability" or "climb consistency".
 - Keep wording practical and drive-team ready; no hype.`;
   }
 

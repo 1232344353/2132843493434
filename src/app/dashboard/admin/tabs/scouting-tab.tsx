@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import {
   updateScoutingAbilityQuestions,
   updateScoutingFormConfig,
+  updatePitScoutFormConfig,
 } from "@/lib/staff-actions";
 import { Button } from "@/components/ui/button";
-import type { FormOptionItem, ScoutingFormConfig } from "@/lib/platform-settings";
+import type { FormOptionItem, ScoutingFormConfig, PitScoutFormConfig } from "@/lib/platform-settings";
 
 interface ScoutingTabProps {
   scoutingAbilityQuestions: string[];
   formConfig: ScoutingFormConfig;
+  pitScoutConfig: PitScoutFormConfig;
 }
 
 /* ── Reusable option-list editor ── */
@@ -226,6 +228,7 @@ function StringListEditor({
 export function ScoutingTab({
   scoutingAbilityQuestions,
   formConfig,
+  pitScoutConfig,
 }: ScoutingTabProps) {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
@@ -242,6 +245,12 @@ export function ScoutingTab({
   const [shootingRangeOptions, setShootingRangeOptions] = useState<FormOptionItem[]>(formConfig.shootingRangeOptions);
   const [autoStartPositions, setAutoStartPositions] = useState<string[]>(formConfig.autoStartPositions);
   const [ratingFields, setRatingFields] = useState<FormOptionItem[]>(formConfig.ratingFields);
+
+  // Pit scout config state
+  const [pitDrivetrainOptions, setPitDrivetrainOptions] = useState<string[]>(pitScoutConfig.drivetrainOptions);
+  const [pitIntakeOptions, setPitIntakeOptions] = useState<FormOptionItem[]>(pitScoutConfig.intakeOptions);
+  const [pitScoringRangeOptions, setPitScoringRangeOptions] = useState<FormOptionItem[]>(pitScoutConfig.scoringRangeOptions);
+  const [pitClimbOptions, setPitClimbOptions] = useState<string[]>(pitScoutConfig.climbOptions);
 
   const showStatus = useCallback((msg: string) => {
     setStatus(msg);
@@ -285,6 +294,27 @@ export function ScoutingTab({
     }
 
     showStatus("Scouting form config saved.");
+    startTransition(() => router.refresh());
+  }
+
+  async function handleSavePitScoutConfig() {
+    const config: PitScoutFormConfig = {
+      drivetrainOptions: pitDrivetrainOptions,
+      intakeOptions: pitIntakeOptions,
+      scoringRangeOptions: pitScoringRangeOptions,
+      climbOptions: pitClimbOptions,
+    };
+
+    const formData = new FormData();
+    formData.set("pitScoutConfigJson", JSON.stringify(config));
+
+    const result = await updatePitScoutFormConfig(formData);
+    if (result?.error) {
+      showStatus(result.error);
+      return;
+    }
+
+    showStatus("Pit scout config saved.");
     startTransition(() => router.refresh());
   }
 
@@ -396,6 +426,80 @@ export function ScoutingTab({
           </Button>
           <p className="text-xs text-gray-500">
             Changes apply to all new scouting sessions.
+          </p>
+        </div>
+      </div>
+
+      {/* ── Pit Scout Config ── */}
+      <div className="mt-6 rounded-2xl dashboard-panel dashboard-card p-5 space-y-8">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-300">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.855z" />
+            </svg>
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-white">Pit Scout Form</h3>
+            <p className="mt-1 text-sm text-gray-400">
+              Customize the options shown on the pit scouting form (accessed from team profiles).
+            </p>
+          </div>
+        </div>
+
+        <div className="border-t border-white/5 pt-6">
+          <StringListEditor
+            title="Drivetrain Options"
+            description="Single-select buttons for robot drivetrain type."
+            items={pitDrivetrainOptions}
+            onChange={setPitDrivetrainOptions}
+            placeholder="e.g. Swerve"
+          />
+        </div>
+
+        <div className="border-t border-white/5 pt-6">
+          <OptionListEditor
+            title="Intake Types"
+            description="Multi-select buttons for how the robot picks up game pieces."
+            items={pitIntakeOptions}
+            onChange={setPitIntakeOptions}
+            keyPlaceholder="e.g. ground"
+            labelPlaceholder="e.g. Ground"
+          />
+        </div>
+
+        <div className="border-t border-white/5 pt-6">
+          <OptionListEditor
+            title="Scoring Ranges"
+            description="Multi-select buttons for effective scoring distances."
+            items={pitScoringRangeOptions}
+            onChange={setPitScoringRangeOptions}
+            keyPlaceholder="e.g. close"
+            labelPlaceholder="e.g. Close"
+          />
+        </div>
+
+        <div className="border-t border-white/5 pt-6">
+          <StringListEditor
+            title="Climb Options"
+            description="Single-select buttons for climb capability."
+            items={pitClimbOptions}
+            onChange={setPitClimbOptions}
+            placeholder="e.g. Level 1"
+          />
+        </div>
+
+        <div className="border-t border-white/5 pt-6 flex flex-wrap items-center gap-3">
+          <Button
+            type="button"
+            size="sm"
+            loading={isPending}
+            onClick={handleSavePitScoutConfig}
+          >
+            Save pit scout config
+          </Button>
+          <p className="text-xs text-gray-500">
+            Changes apply to all new pit scouting sessions.
           </p>
         </div>
       </div>

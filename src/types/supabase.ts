@@ -461,6 +461,91 @@ export type Database = {
           },
         ]
       }
+      pit_scout_entries: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          org_id: string
+          scouted_by: string
+          event_id: string
+          team_number: number
+          drivetrain: string | null
+          width_inches: number | null
+          length_inches: number | null
+          height_inches: number | null
+          intake_types: Json | null
+          scoring_ranges: Json | null
+          estimated_cycles: number | null
+          climb_capability: string | null
+          auto_description: string | null
+          auto_fuel_scored: number | null
+          notes: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          org_id: string
+          scouted_by: string
+          event_id: string
+          team_number: number
+          drivetrain?: string | null
+          width_inches?: number | null
+          length_inches?: number | null
+          height_inches?: number | null
+          intake_types?: Json | null
+          scoring_ranges?: Json | null
+          estimated_cycles?: number | null
+          climb_capability?: string | null
+          auto_description?: string | null
+          auto_fuel_scored?: number | null
+          notes?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          org_id?: string
+          scouted_by?: string
+          event_id?: string
+          team_number?: number
+          drivetrain?: string | null
+          width_inches?: number | null
+          length_inches?: number | null
+          height_inches?: number | null
+          intake_types?: Json | null
+          scoring_ranges?: Json | null
+          estimated_cycles?: number | null
+          climb_capability?: string | null
+          auto_description?: string | null
+          auto_fuel_scored?: number | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pit_scout_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_scout_entries_scouted_by_fkey"
+            columns: ["scouted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_scout_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scouting_entries: {
         Row: {
           ability_answers: Json | null

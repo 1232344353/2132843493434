@@ -360,7 +360,7 @@ function buildFallbackBrief(
     strategy: {
       redRecommendations: [
         "Prioritize clean cycle lanes for your strongest scorer and avoid traffic overlap.",
-        "Assign one robot to protect endgame timing and prevent late climb congestion.",
+        "Assign one robot to protect endgame timing and prevent congestion during END GAME scoring.",
       ],
       blueRecommendations: [
         "Use your highest-output scorer as the pace setter and feed them clear possession chains.",
@@ -376,7 +376,7 @@ function buildFallbackBrief(
       teamsNeedingCoverage,
       scoutActions: [
         "Prioritize one full-cycle observation for every high-priority team before mid-match.",
-        "Log endgame attempt type, success/failure, and the exact failure mode when it misses.",
+        "Log endgame strategy (FUEL scoring, TOWER climb, or both), attempt outcome, and any failure details.",
       ],
     },
   };

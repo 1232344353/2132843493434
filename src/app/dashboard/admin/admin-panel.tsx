@@ -16,7 +16,7 @@ import { InboxTab } from "./tabs/inbox-tab";
 import { TestimonialsTab } from "./tabs/testimonials-tab";
 import { TeamsTab } from "./tabs/teams-tab";
 import { ScoutingTab } from "./tabs/scouting-tab";
-import type { ScoutingFormConfig } from "@/lib/platform-settings";
+import type { ScoutingFormConfig, PitScoutFormConfig } from "@/lib/platform-settings";
 
 /* ── Types ── */
 
@@ -88,6 +88,7 @@ interface AdminPanelProps {
     supporter: number;
   };
   scoutingFormConfig: ScoutingFormConfig;
+  pitScoutFormConfig: PitScoutFormConfig;
   adminName: string;
   adminEmail: string;
 }
@@ -194,6 +195,7 @@ export function AdminPanel({
   scoutingAbilityQuestions,
   teamAiPromptLimits,
   scoutingFormConfig,
+  pitScoutFormConfig,
   adminName,
   adminEmail,
 }: AdminPanelProps) {
@@ -256,6 +258,7 @@ export function AdminPanel({
           <ScoutingTab
             scoutingAbilityQuestions={scoutingAbilityQuestions}
             formConfig={scoutingFormConfig}
+            pitScoutConfig={pitScoutFormConfig}
           />
         );
       case "analytics":
