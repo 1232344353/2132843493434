@@ -10,24 +10,11 @@ export function HeroAnimations() {
   return (
     <div className="grid items-center gap-12 lg:grid-cols-[1fr_1.1fr] lg:gap-14">
       <div>
-        <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: EASE }}
-          className="inline-flex items-center gap-2 rounded-full border border-teal-300/30 bg-teal-300/10 px-4 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-teal-100"
-        >
-          <span className="relative inline-flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-300/70" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-teal-300" />
-          </span>
-          Testing Beta
-        </motion.div>
-
         <motion.h1
           initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.08, ease: EASE }}
-          className="font-outfit mt-6 max-w-3xl text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl xl:text-[4.2rem]"
+          className="font-outfit max-w-3xl text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl xl:text-[4.2rem]"
         >
           Run your event scouting
           <span className="block bg-gradient-to-r from-teal-200 via-cyan-300 to-teal-400 bg-clip-text text-transparent">
