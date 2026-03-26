@@ -22,7 +22,7 @@ export async function generateMetadata({
     .eq("tba_key", eventKey)
     .single();
   const title = event
-    ? `Matches — ${event.year ? `${event.year} ` : ""}${event.name} | PitPilot`
+    ? `Matches: ${event.year ? `${event.year} ` : ""}${event.name} | PitPilot`
     : "Matches | PitPilot";
   return { title };
 }

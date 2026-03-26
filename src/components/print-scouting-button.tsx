@@ -82,7 +82,7 @@ export function PrintScoutingButton({
     const html = `<!DOCTYPE html>
 <html>
 <head>
-  <title>${safeTitle} — Scouting Data</title>
+  <title>${safeTitle}: Scouting Data</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 10px; color: #1a1a1a; padding: 16px; }
@@ -101,7 +101,7 @@ export function PrintScoutingButton({
   </style>
 </head>
 <body>
-  <h1>${safeTitle} — Scouting Data</h1>
+  <h1>${safeTitle}: Scouting Data</h1>
   <p class="meta">Exported ${new Date().toLocaleString()} &middot; ${rows.length} entries &middot; PitPilot</p>
   <table>
     <thead>

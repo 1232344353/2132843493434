@@ -20,7 +20,7 @@ export async function generateMetadata({
     .eq("tba_key", eventKey)
     .single();
   const title = event
-    ? `Analytics — ${event.year ? `${event.year} ` : ""}${event.name} | PitPilot`
+    ? `Analytics: ${event.year ? `${event.year} ` : ""}${event.name} | PitPilot`
     : "Analytics | PitPilot";
   return { title };
 }

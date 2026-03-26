@@ -26,7 +26,7 @@ export async function generateMetadata({
   const teamLabel = team?.name ? `Team ${teamNumber} ${team.name}` : `Team ${teamNumber}`;
   return {
     title: eventLabel
-      ? `${teamLabel} — ${eventLabel} | PitPilot`
+      ? `${teamLabel} at ${eventLabel} | PitPilot`
       : `${teamLabel} | PitPilot`,
   };
 }
