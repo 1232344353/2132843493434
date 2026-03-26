@@ -42,16 +42,51 @@ interface EventForCache {
   year: number;
 }
 
+interface Assignment {
+  match_id: string;
+  team_number: number;
+}
+
 interface EventDataCacherProps {
   eventKey: string;
   event: EventForCache;
   matches: MatchForCache[];
+  /** Assignments for the current user — only these form pages get pre-cached */
+  assignments?: Assignment[];
+}
+
+const PAGES_CACHE_NAME = "pitpilot-pages-v1";
+
+async function preCacheAssignedForms(assignments: Assignment[]) {
+  if (!("caches" in window)) return;
+  if (assignments.length === 0) return;
+
+  try {
+    const cache = await caches.open(PAGES_CACHE_NAME);
+    for (const { match_id, team_number } of assignments) {
+      const url = `/scout/${match_id}/${team_number}`;
+      // Skip if already cached to avoid unnecessary requests
+      const existing = await cache.match(url);
+      if (existing) continue;
+      try {
+        const response = await fetch(url, { credentials: "include" });
+        if (response.ok) {
+          await cache.put(url, response.clone());
+        }
+      } catch {
+        // Best effort — skip failed individual pre-fetches
+      }
+    }
+  } catch {
+    // caches API unavailable or cache open failed
+  }
 }
 
 export function EventDataCacher({
   eventKey,
   event,
   matches,
+  assignments = [],
 }: EventDataCacherProps) {
   useEffect(() => {
     // Only cache when online (we're reading fresh data from the server)
@@ -97,7 +132,19 @@ export function EventDataCacher({
     ]).catch(() => {
       // Silent fail — caching is best-effort
     });
-  }, [eventKey, event, matches]);
+
+    // Remember this matches page URL so offline.html can link back to it
+    try {
+      localStorage.setItem(
+        "pitpilot:last-matches-url",
+        `/dashboard/events/${eventKey}/matches`
+      );
+    } catch { /* storage blocked */ }
+
+    // Pre-cache assigned scout form pages so they load offline without needing
+    // a manual hard-refresh first. Runs after IndexedDB write, in the background.
+    void preCacheAssignedForms(assignments);
+  }, [eventKey, event, matches, assignments]);
 
   // Renders nothing — pure side-effect component
   return null;

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import type { PitScoutFormConfig } from "@/lib/platform-settings";
+import { savePitOffline, buildPitEntryKey, hasPendingPitEntry } from "@/lib/offline-queue";
 
 interface PitScoutButtonProps {
   eventId: string;
@@ -62,8 +63,10 @@ export function PitScoutButton({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedOffline, setSavedOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [existingId, setExistingId] = useState<string | null>(null);
+  const [hasPending, setHasPending] = useState(false);
 
   // Form state
   const [drivetrain, setDrivetrain] = useState("");
@@ -93,9 +96,24 @@ export function PitScoutButton({
   }, [drivetrain, width, length, height, intakeTypes, scoringRanges, estimatedCycles, climbCapability, fuelOutput, autoDescription, autoFuelScored, notes]);
   const totalFields = 8;
 
+  // Check for pending offline entry on mount and whenever the modal closes
+  useEffect(() => {
+    if (open) return; // only check when closed
+    hasPendingPitEntry(orgId, eventId, teamNumber)
+      .then(setHasPending)
+      .catch(() => {});
+  }, [open, orgId, eventId, teamNumber]);
+
   // Load existing pit scout data when modal opens
   useEffect(() => {
     if (!open) return;
+
+    // Skip the fetch when offline — show a blank/pre-filled form instead
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -142,8 +160,8 @@ export function PitScoutButton({
     setSaving(true);
     setError(null);
     setSaved(false);
+    setSavedOffline(false);
 
-    const supabase = createClient();
     const entry = {
       org_id: orgId,
       scouted_by: userId,
@@ -163,6 +181,27 @@ export function PitScoutButton({
       notes: notes.trim() || null,
     };
 
+    // Offline path: save to IndexedDB queue
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      try {
+        await savePitOffline({
+          ...entry,
+          id: buildPitEntryKey(orgId, eventId, teamNumber),
+          created_at: new Date().toISOString(),
+        });
+        setSaving(false);
+        setSavedOffline(true);
+        setHasPending(true);
+        setTimeout(() => setOpen(false), 1800);
+      } catch {
+        setError("Failed to save offline. Please try again.");
+        setSaving(false);
+      }
+      return;
+    }
+
+    // Online path: save directly to Supabase
+    const supabase = createClient();
     const result = existingId
       ? await supabase.from("pit_scout_entries").update(entry).eq("id", existingId)
       : await supabase.from("pit_scout_entries").upsert(entry, {
@@ -197,13 +236,16 @@ export function PitScoutButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-200 transition hover:bg-white/10"
+        className="relative flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-sm font-medium text-gray-200 transition hover:bg-white/10"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 20h9" />
           <path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.855z" />
         </svg>
         Pit Scout
+        {hasPending && (
+          <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-[#0a1020]" aria-label="Pending sync" />
+        )}
       </button>
 
       {createPortal(
@@ -458,10 +500,12 @@ export function PitScoutButton({
                     <button
                       type="button"
                       onClick={handleSave}
-                      disabled={saving || saved}
+                      disabled={saving || saved || savedOffline}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition disabled:opacity-60 ${
                         saved
                           ? "bg-green-600 text-white"
+                          : savedOffline
+                          ? "bg-amber-600 text-white"
                           : "bg-teal-500 hover:bg-teal-400 text-white"
                       }`}
                     >
@@ -489,6 +533,11 @@ export function PitScoutButton({
                             />
                           </motion.svg>
                           Saved!
+                        </>
+                      ) : savedOffline ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                          Saved offline
                         </>
                       ) : saving ? (
                         <>

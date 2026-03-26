@@ -8,6 +8,9 @@ import {
   removePendingEntry,
   getPendingCount,
   updateEntryStatus,
+  getPendingPitEntries,
+  removePendingPitEntry,
+  updatePitEntryStatus,
 } from "@/lib/offline-queue";
 import { removeDraft, buildDraftKey } from "@/lib/offline-drafts";
 import {
@@ -189,8 +192,11 @@ export function OnlineStatus() {
     setSyncing(true);
     setSyncErrors(0);
     const supabase = createClient();
-    const entries = await getPendingEntries();
-    const total = entries.length;
+    const [entries, pitEntriesEarly] = await Promise.all([
+      getPendingEntries(),
+      getPendingPitEntries(),
+    ]);
+    const total = entries.length + pitEntriesEarly.length;
     setSyncProgress({ current: 0, total });
 
     let errors = 0;
@@ -292,8 +298,50 @@ export function OnlineStatus() {
       setSyncProgress({ current: i + 1, total });
     }
 
+    // ── Sync pit scout entries ──────────────────────────────────────
+    const pitEntries = pitEntriesEarly;
+    for (const [pitIdx, pitEntry] of pitEntries.entries()) {
+      const pitFailed = pitEntry._failedAttempts ?? 0;
+
+      if (pitFailed > 0 && pitEntry._lastAttemptAt) {
+        const backoffMs = Math.min(30000 * Math.pow(2, pitFailed - 1), 480000);
+        if (Date.now() - new Date(pitEntry._lastAttemptAt).getTime() < backoffMs) {
+          deferred++;
+          continue;
+        }
+      }
+
+      await updatePitEntryStatus(pitEntry.id, { _syncStatus: "syncing" });
+
+      const {
+        id: _pid,
+        _syncStatus: _ps,
+        _failedAttempts: _pf,
+        _lastAttemptAt: _pl,
+        ...pitData
+      } = pitEntry;
+      void _pid; void _ps; void _pf; void _pl;
+
+      const pitResult = await supabase
+        .from("pit_scout_entries")
+        .upsert(pitData, { onConflict: "org_id,event_id,team_number" });
+
+      if (!pitResult.error) {
+        await removePendingPitEntry(pitEntry.id);
+        synced++;
+      } else {
+        await updatePitEntryStatus(pitEntry.id, {
+          _syncStatus: "failed",
+          _failedAttempts: pitFailed + 1,
+          _lastAttemptAt: now,
+        });
+        errors++;
+      }
+      setSyncProgress({ current: entries.length + pitIdx + 1, total });
+    }
+
     setSyncErrors(errors + deferred);
-    if (errors === 0 && deferred === 0 && total > 0) {
+    if (errors === 0 && deferred === 0 && (total > 0 || pitEntries.length > 0)) {
       setLastSyncTime(new Date());
     }
     const remaining = await getPendingCount().catch(() => null);

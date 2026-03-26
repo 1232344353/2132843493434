@@ -292,6 +292,7 @@ export default async function MatchListPage({
         eventKey={eventKey}
         event={{ id: event.id, tba_key: eventKey, name: event.name, year: event.year }}
         matches={matches ?? []}
+        assignments={myAssignments}
       />
       <main className="mx-auto max-w-2xl px-4 pb-12 pt-32 space-y-6">
         <div data-tour="matches-header" className="flex items-center justify-between">

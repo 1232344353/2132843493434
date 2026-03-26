@@ -7,7 +7,7 @@
  */
 
 export const DB_NAME = "scoutai-offline";
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -27,6 +27,7 @@ export function openDB(): Promise<IDBDatabase> {
 
       // ── v1 → v2: cache stores + drafts ──
       if (oldVersion < 2) {
+
         if (!db.objectStoreNames.contains("cached-matches")) {
           const matchStore = db.createObjectStore("cached-matches", {
             keyPath: "id",
@@ -47,6 +48,13 @@ export function openDB(): Promise<IDBDatabase> {
 
         if (!db.objectStoreNames.contains("draft-entries")) {
           db.createObjectStore("draft-entries", { keyPath: "id" });
+        }
+      }
+
+      // ── v2 → v3: pit scout pending entries ──
+      if (oldVersion < 3) {
+        if (!db.objectStoreNames.contains("pending-pit-entries")) {
+          db.createObjectStore("pending-pit-entries", { keyPath: "id" });
         }
       }
     };

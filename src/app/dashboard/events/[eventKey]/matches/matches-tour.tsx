@@ -24,6 +24,11 @@ const MATCHES_TOUR_STEPS: TourStep[] = [
     titleKey: "tour.matchesGrid",
     descKey: "tour.matchesGridDesc",
   },
+  {
+    selector: null,
+    titleKey: "tour.matchesOffline",
+    descKey: "tour.matchesOfflineDesc",
+  },
 ];
 
 export function MatchesTour() {

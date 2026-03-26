@@ -164,6 +164,8 @@ const en = {
   "tour.matchesTipsDesc": "Highlighted team boxes are your assignments, and checkmarks show entries you already submitted.",
   "tour.matchesGrid": "Match Grid",
   "tour.matchesGridDesc": "Qualification and playoff matches are grouped here. Open team forms directly from each alliance row.",
+  "tour.matchesOffline": "Works Offline",
+  "tour.matchesOfflineDesc": "Scouting forms save to your device if you lose connection. Once you're back online, entries sync to the database automatically. Visit your assigned matches while online first so they load from cache if the Wi-Fi drops.",
   "tour.assignmentsWelcome": "Assignments Tour",
   "tour.assignmentsWelcomeDesc": "Keep scouting coverage organized by assigning each robot slot across upcoming matches.",
   "tour.assignmentsHeader": "Assignments Overview",

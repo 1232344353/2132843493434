@@ -9,7 +9,7 @@
 
 import { clearAllCachedData, pruneOldCachedData } from "./offline-cache";
 import { clearAllDrafts, pruneOldDrafts } from "./offline-drafts";
-import { clearAllPendingEntries, getPendingEntries } from "./offline-queue";
+import { clearAllPendingEntries, clearAllPendingPitEntries, getPendingEntries } from "./offline-queue";
 
 // ── Clear everything (used on logout for privacy) ──────────────────
 
@@ -18,6 +18,7 @@ export async function clearAllOfflineData(): Promise<void> {
     clearAllCachedData(),
     clearAllDrafts(),
     clearAllPendingEntries(),
+    clearAllPendingPitEntries(),
   ]);
 }
 

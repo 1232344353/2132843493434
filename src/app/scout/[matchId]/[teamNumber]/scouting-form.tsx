@@ -526,7 +526,7 @@ export function ScoutingForm({
               : "border-emerald-400/30 bg-emerald-500/10"
           }`}
         >
-          <div className="text-4xl">{savedOffline ? "📱" : "✓"}</div>
+          <div className="text-4xl">{savedOffline ? "✓" : "✓"}</div>
           <p
             className={`text-lg font-semibold ${
               savedOffline ? "text-teal-200" : "text-emerald-200"

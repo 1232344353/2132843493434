@@ -175,7 +175,7 @@
       <button class="retry-btn" onclick="window.location.reload()">
         Try Again
       </button>
-      <a class="home-btn" href="/">Back Home</a>
+      <a class="home-btn" id="matches-btn" href="/dashboard">Scout Matches</a>
     </div>
 
     <p id="status" class="status">
@@ -187,6 +187,13 @@
   </div>
 
   <script>
+    try {
+      var matchesUrl = localStorage.getItem("pitpilot:last-matches-url");
+      if (matchesUrl) {
+        document.getElementById("matches-btn").href = matchesUrl;
+      }
+    } catch (e) {}
+
     var statusEl = document.getElementById("status");
 
     function setStatus(isOnline) {

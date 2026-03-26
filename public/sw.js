@@ -1,4 +1,8 @@
 const CACHE_NAME = "pitpilot-v5";
+// Separate cache for dynamic pages that need offline fallback.
+// Versioned independently so a SW update doesn't bust cached scout pages.
+const PAGES_CACHE_NAME = "pitpilot-pages-v1";
+
 const STATIC_ASSETS = [
   "/",
   "/login",
@@ -15,6 +19,17 @@ const STATIC_ASSETS = [
   "/og-image.jpg",
 ];
 
+// Routes whose HTML responses are cached so they load offline.
+// Scouts will have visited these while online; the cached HTML includes
+// all server-rendered props (match info, form config, etc.).
+function shouldCachePage(pathname) {
+  return (
+    pathname.startsWith("/scout/") ||
+    // Also cache the matches list so scouts can navigate to forms from it
+    pathname.match(/^\/dashboard\/events\/[^/]+\/matches$/)
+  );
+}
+
 // Install: cache static shell + offline fallback
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -29,7 +44,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(
         keys
-          .filter((key) => key !== CACHE_NAME)
+          .filter((key) => key !== CACHE_NAME && key !== PAGES_CACHE_NAME)
           .map((key) => caches.delete(key))
       )
     )
@@ -74,12 +89,34 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigation requests: network-first, fallback to offline.html.
-  // Do not cache HTML navigations to avoid serving stale app shells after deploys.
+  // Navigation requests
   if (event.request.mode === "navigate") {
+    // Scout form pages + match list: network-first, cache on success,
+    // serve cached copy when offline so scouts can access forms without a connection.
+    if (shouldCachePage(url.pathname)) {
+      event.respondWith(
+        fetch(event.request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
+              caches.open(PAGES_CACHE_NAME).then((cache) => {
+                cache.put(event.request, clone);
+              });
+            }
+            return response;
+          })
+          .catch(() =>
+            caches.match(event.request).then(
+              (cached) => cached || caches.match("/offline.html")
+            )
+          )
+      );
+      return;
+    }
+
+    // All other navigations: network-first, no cache (avoids stale app shells)
     event.respondWith(
-      fetch(event.request)
-        .catch(() => caches.match("/offline.html"))
+      fetch(event.request).catch(() => caches.match("/offline.html"))
     );
     return;
   }
@@ -89,18 +126,19 @@ self.addEventListener("fetch", (event) => {
     caches.match(event.request).then(
       (cached) =>
         cached ||
-        fetch(event.request).then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        }).catch(() => {
-          // Return nothing for failed non-navigation requests
-          return new Response("", { status: 503, statusText: "Offline" });
-        })
+        fetch(event.request)
+          .then((response) => {
+            if (response.ok) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, clone);
+              });
+            }
+            return response;
+          })
+          .catch(() => {
+            return new Response("", { status: 503, statusText: "Offline" });
+          })
     )
   );
 });
