@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Navbar } from "@/components/navbar";
 import { AdminPanel } from "./admin-panel";
 import {
@@ -31,29 +32,31 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
+  // Use admin client (service role) to bypass RLS and get site-wide counts
+  const adminSupabase = createAdminClient();
+
   const [orgsRes, profilesRes, entriesRes, matchesRes, eventsRes] = await Promise.all([
-    supabase
       .from("organizations")
       .select("id, name, team_number, join_code, created_at")
       .order("created_at", { ascending: false }),
-    supabase.from("profiles").select("id", { count: "exact", head: true }),
-    supabase.from("scouting_entries").select("id", { count: "exact", head: true }),
-    supabase.from("matches").select("id", { count: "exact", head: true }),
-    supabase.from("events").select("id", { count: "exact", head: true }),
+    adminSupabase.from("profiles").select("id", { count: "exact", head: true }),
+    adminSupabase.from("scouting_entries").select("id", { count: "exact", head: true }),
+    adminSupabase.from("matches").select("id", { count: "exact", head: true }),
+    adminSupabase.from("events").select("id", { count: "exact", head: true }),
   ]);
 
-  const { data: testimonials } = await supabase
+  const { data: testimonials } = await adminSupabase
     .from("testimonials")
     .select("*")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
-  const { data: announcements } = await supabase
+  const { data: announcements } = await adminSupabase
     .from("announcements")
     .select("*")
     .order("created_at", { ascending: false });
 
-  const { data: contactMessages } = await supabase
+  const { data: contactMessages } = await adminSupabase
     .from("contact_messages")
     .select("id, email, subject, message, status, response, created_at, responded_at")
     .order("created_at", { ascending: false });
@@ -64,22 +67,22 @@ export default async function AdminPage() {
   const cutoff = thirtyDaysAgo.toISOString();
 
   const [signupsRes, orgsTimeRes, entriesTimeRes, messagesTimeRes] = await Promise.all([
-    supabase
+    adminSupabase
       .from("profiles")
       .select("created_at")
       .gte("created_at", cutoff)
       .order("created_at", { ascending: true }),
-    supabase
+    adminSupabase
       .from("organizations")
       .select("created_at")
       .gte("created_at", cutoff)
       .order("created_at", { ascending: true }),
-    supabase
+    adminSupabase
       .from("scouting_entries")
       .select("created_at")
       .gte("created_at", cutoff)
       .order("created_at", { ascending: true }),
-    supabase
+    adminSupabase
       .from("team_messages")
       .select("created_at")
       .gte("created_at", cutoff)
