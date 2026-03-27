@@ -36,6 +36,7 @@ export default async function AdminPage() {
   const adminSupabase = createAdminClient();
 
   const [orgsRes, profilesRes, entriesRes, matchesRes, eventsRes] = await Promise.all([
+    adminSupabase
       .from("organizations")
       .select("id, name, team_number, join_code, created_at")
       .order("created_at", { ascending: false }),
