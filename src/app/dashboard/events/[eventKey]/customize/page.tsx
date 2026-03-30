@@ -5,6 +5,7 @@ import { Navbar } from "@/components/navbar";
 import { getEffectiveEventFormConfig, getOtherCustomizedEvents } from "@/lib/event-form-config";
 import { EventCustomizeForm } from "./customize-form";
 import { ImportFormButton } from "./import-form-button";
+import { CustomizeTour } from "./customize-tour";
 
 export default async function EventCustomizePage({
   params,
@@ -48,8 +49,9 @@ export default async function EventCustomizePage({
   return (
     <div className="min-h-screen dashboard-page">
       <Navbar />
+      <CustomizeTour />
       <main className="mx-auto max-w-3xl px-4 pb-16 pt-32">
-        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div data-tour="customize-header" className="mb-8 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
               Form customization
@@ -59,7 +61,7 @@ export default async function EventCustomizePage({
               Customize the scouting form for your scouts at this event. Starts from the global template.
             </p>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-3 md:justify-end">
+          <div data-tour="customize-actions" className="flex shrink-0 flex-wrap items-center gap-3 md:justify-end">
             <ImportFormButton eventKey={eventKey} sources={importSources} />
             <Link
               href={`/dashboard/events/${eventKey}`}

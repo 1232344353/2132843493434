@@ -949,7 +949,7 @@ export function EventCustomizeForm({
       />
 
       {/* Tabs */}
-      <div className="mb-6 flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+      <div data-tour="customize-tabs" className="mb-6 flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -968,7 +968,7 @@ export function EventCustomizeForm({
 
       {/* Match scouting tab */}
       {activeTab === "match" && (
-        <div className="rounded-2xl dashboard-panel dashboard-card p-5">
+        <div data-tour="customize-match-panel" className="rounded-2xl dashboard-panel dashboard-card p-5">
           <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-base font-semibold text-white">Match Scouting Form</h3>
@@ -1212,7 +1212,7 @@ export function EventCustomizeForm({
 
       {/* Pit scouting tab */}
       {activeTab === "pit" && (
-        <div className="rounded-2xl dashboard-panel dashboard-card p-5 space-y-8">
+        <div data-tour="customize-pit-panel" className="rounded-2xl dashboard-panel dashboard-card p-5 space-y-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h3 className="text-base font-semibold text-white">Pit Scouting Form</h3>
