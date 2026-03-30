@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getScoutingAbilityQuestions, getScoutingFormConfig } from "@/lib/platform-settings";
+import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 import { ScoutingForm } from "./scouting-form";
 
 export default async function ScoutPage({
@@ -134,10 +134,9 @@ export default async function ScoutPage({
     match.events?.year && match.events?.name
       ? `${match.events.year} ${match.events.name}`
       : match.events?.name ?? "Event";
-  const [scoutingAbilityQuestions, scoutingFormConfig] = await Promise.all([
-    getScoutingAbilityQuestions(supabase),
-    getScoutingFormConfig(supabase),
-  ]);
+  const eventKey = match.events?.tba_key ?? "";
+  const { questions: scoutingAbilityQuestions, formConfig: scoutingFormConfig } =
+    await getEffectiveEventFormConfig(supabase, profile.org_id, eventKey);
 
   return (
     <div className="min-h-screen">

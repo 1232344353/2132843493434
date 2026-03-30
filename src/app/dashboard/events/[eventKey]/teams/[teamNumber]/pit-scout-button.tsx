@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
-import type { PitScoutFormConfig } from "@/lib/platform-settings";
+import { CounterButton } from "@/components/counter-button";
+import { PIT_SECTION_IDS, type PitScoutFormConfig, type PitSectionId, type CustomSection, type CustomFieldDef } from "@/lib/platform-settings";
 import { savePitOffline, buildPitEntryKey, hasPendingPitEntry } from "@/lib/offline-queue";
 
 interface PitScoutButtonProps {
   eventId: string;
-  eventKey: string;
   teamNumber: number;
   orgId: string;
   userId: string;
@@ -23,6 +23,141 @@ const LEGEND = "text-sm font-medium text-gray-300 mb-2";
 const INPUT =
   "w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-teal-500/50 focus:outline-none";
 const TEXTAREA = `${INPUT} resize-none`;
+
+const PIT_SECTION_META: Record<PitSectionId, { title: string; accent: string }> = {
+  build: { title: "Robot Build", accent: "text-cyan-300" },
+  scoring: { title: "Scoring", accent: "text-emerald-300" },
+  endgame: { title: "Endgame", accent: "text-purple-300" },
+  auto_notes: { title: "Auto & Notes", accent: "text-teal-300" },
+};
+
+function isPitSectionId(value: string): value is PitSectionId {
+  return PIT_SECTION_IDS.includes(value as PitSectionId);
+}
+
+type CustomFieldValue = string | number | boolean | string[];
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function parseCustomData(
+  value: unknown,
+  sections: CustomSection[]
+): Record<string, CustomFieldValue> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  const raw = value as Record<string, unknown>;
+  const parsed: Record<string, CustomFieldValue> = {};
+
+  for (const section of sections) {
+    for (const field of section.fields) {
+      const fieldValue = raw[field.id];
+      switch (field.type) {
+        case "counter": {
+          if (typeof fieldValue !== "number" || !Number.isFinite(fieldValue)) break;
+          parsed[field.id] = clampNumber(Math.trunc(fieldValue), field.min ?? 0, field.max ?? 99);
+          break;
+        }
+        case "toggle": {
+          if (typeof fieldValue === "boolean") parsed[field.id] = fieldValue;
+          break;
+        }
+        case "multi-select": {
+          if (!Array.isArray(fieldValue)) break;
+          const allowedKeys = new Set((field.options ?? []).map((option) => option.key));
+          const selected = Array.from(
+            new Set(
+              fieldValue.filter(
+                (item): item is string => typeof item === "string" && allowedKeys.has(item)
+              )
+            )
+          );
+          if (selected.length > 0) parsed[field.id] = selected;
+          break;
+        }
+        case "rating": {
+          if (typeof fieldValue !== "number" || !Number.isFinite(fieldValue)) break;
+          parsed[field.id] = clampNumber(Math.trunc(fieldValue), 0, field.maxStars ?? 5);
+          break;
+        }
+        case "text": {
+          if (typeof fieldValue === "string") parsed[field.id] = fieldValue;
+          break;
+        }
+      }
+    }
+  }
+
+  return parsed;
+}
+
+function sanitizeCustomData(
+  data: Record<string, CustomFieldValue>,
+  sections: CustomSection[]
+): Record<string, CustomFieldValue> {
+  const sanitized: Record<string, CustomFieldValue> = {};
+
+  for (const section of sections) {
+    for (const field of section.fields) {
+      const fieldValue = data[field.id];
+      switch (field.type) {
+        case "counter": {
+          if (typeof fieldValue !== "number" || !Number.isFinite(fieldValue)) break;
+          sanitized[field.id] = clampNumber(Math.trunc(fieldValue), field.min ?? 0, field.max ?? 99);
+          break;
+        }
+        case "toggle": {
+          if (typeof fieldValue === "boolean") sanitized[field.id] = fieldValue;
+          break;
+        }
+        case "multi-select": {
+          if (!Array.isArray(fieldValue)) break;
+          const allowedKeys = new Set((field.options ?? []).map((option) => option.key));
+          const selected = Array.from(
+            new Set(
+              fieldValue.filter(
+                (item): item is string => typeof item === "string" && allowedKeys.has(item)
+              )
+            )
+          );
+          if (selected.length > 0) sanitized[field.id] = selected;
+          break;
+        }
+        case "rating": {
+          if (typeof fieldValue !== "number" || !Number.isFinite(fieldValue)) break;
+          const clamped = clampNumber(Math.trunc(fieldValue), 0, field.maxStars ?? 5);
+          if (clamped > 0) sanitized[field.id] = clamped;
+          break;
+        }
+        case "text": {
+          if (typeof fieldValue !== "string") break;
+          const trimmed = fieldValue.trim();
+          if (trimmed) sanitized[field.id] = trimmed;
+          break;
+        }
+      }
+    }
+  }
+
+  return sanitized;
+}
+
+function stripUnsupportedPitColumns<T extends Record<string, unknown>>(
+  payload: T,
+  errorMessage: string
+) {
+  const next = { ...payload } as Record<string, unknown>;
+  const msg = errorMessage.toLowerCase();
+
+  if (msg.includes("custom_data")) {
+    delete next.custom_data;
+  }
+
+  return next as T;
+}
 
 function ToggleButton({
   selected,
@@ -52,7 +187,6 @@ function ToggleButton({
 
 export function PitScoutButton({
   eventId,
-  eventKey,
   teamNumber,
   orgId,
   userId,
@@ -81,20 +215,58 @@ export function PitScoutButton({
   const [autoDescription, setAutoDescription] = useState("");
   const [autoFuelScored, setAutoFuelScored] = useState("");
   const [notes, setNotes] = useState("");
+  const customSections = useMemo(
+    () => config.customSections ?? [],
+    [config.customSections]
+  );
+  const customSectionsById = useMemo(
+    () =>
+      Object.fromEntries(
+        customSections.map((section) => [section.id, section])
+      ) as Record<string, CustomSection>,
+    [customSections]
+  );
+  const [customData, setCustomData] = useState<Record<string, CustomFieldValue>>({});
+  const customDataPayload = useMemo(
+    () => sanitizeCustomData(customData, customSections),
+    [customData, customSections]
+  );
+
+  const visibleSections = useMemo(() => {
+    const hidden = new Set((config.hiddenSections ?? []).filter(isPitSectionId));
+    const saved = config.sectionOrder ?? [];
+    const customIds = new Set(customSections.map((section) => section.id));
+    const ordered = [
+      ...saved.filter((id) => isPitSectionId(id) || customIds.has(id)),
+      ...PIT_SECTION_IDS.filter((id) => !saved.includes(id)),
+      ...customSections.map((section) => section.id).filter((id) => !saved.includes(id)),
+    ];
+    return ordered.filter((id) => !isPitSectionId(id) || !hidden.has(id));
+  }, [config.hiddenSections, config.sectionOrder, customSections]);
 
   const filledCount = useMemo(() => {
     let count = 0;
-    if (drivetrain) count++;
-    if (width || length || height) count++;
-    if (intakeTypes.length > 0) count++;
-    if (scoringRanges.length > 0 || estimatedCycles) count++;
-    if (climbCapability) count++;
-    if (fuelOutput) count++;
-    if (autoDescription.trim() || autoFuelScored) count++;
-    if (notes.trim()) count++;
+    if (visibleSections.includes("build") && (drivetrain || width || length || height)) count++;
+    if (visibleSections.includes("scoring") && (intakeTypes.length > 0 || scoringRanges.length > 0 || estimatedCycles || fuelOutput)) count++;
+    if (visibleSections.includes("endgame") && climbCapability) count++;
+    if (visibleSections.includes("auto_notes") && (autoDescription.trim() || autoFuelScored || notes.trim())) count++;
+    for (const sectionId of visibleSections) {
+      if (isPitSectionId(sectionId)) continue;
+      const section = customSectionsById[sectionId];
+      if (!section) continue;
+      const hasAnswer = section.fields.some((field) => {
+        const value = customDataPayload[field.id];
+        if (Array.isArray(value)) return value.length > 0;
+        if (typeof value === "string") return value.trim().length > 0;
+        if (typeof value === "number") return Number.isFinite(value) && value > 0;
+        return typeof value === "boolean";
+      });
+      if (hasAnswer) count++;
+    }
     return count;
-  }, [drivetrain, width, length, height, intakeTypes, scoringRanges, estimatedCycles, climbCapability, fuelOutput, autoDescription, autoFuelScored, notes]);
-  const totalFields = 8;
+  }, [visibleSections, drivetrain, width, length, height, intakeTypes, scoringRanges, estimatedCycles, fuelOutput, climbCapability, autoDescription, autoFuelScored, notes, customSectionsById, customDataPayload]);
+  const totalFields = visibleSections.length;
+  const progressPercent = totalFields > 0 ? (filledCount / totalFields) * 100 : 0;
 
   // Check for pending offline entry on mount and whenever the modal closes
   useEffect(() => {
@@ -110,47 +282,373 @@ export function PitScoutButton({
 
     // Skip the fetch when offline — show a blank/pre-filled form instead
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    let cancelled = false;
 
-    const supabase = createClient();
-    supabase
-      .from("pit_scout_entries")
-      .select("*")
-      .eq("org_id", orgId)
-      .eq("event_id", eventId)
-      .eq("team_number", teamNumber)
-      .maybeSingle()
-      .then(({ data, error: fetchError }) => {
-        if (fetchError) {
-          setError("Failed to load existing pit scout data.");
-          setLoading(false);
-          return;
-        }
-        if (data) {
-          setExistingId(data.id);
-          setDrivetrain(data.drivetrain ?? "");
-          setWidth(data.width_inches?.toString() ?? "");
-          setLength(data.length_inches?.toString() ?? "");
-          setHeight(data.height_inches?.toString() ?? "");
-          const intake = Array.isArray(data.intake_types) ? data.intake_types as string[] : [];
-          setIntakeTypes(intake);
-          const ranges = Array.isArray(data.scoring_ranges) ? data.scoring_ranges as string[] : [];
-          setScoringRanges(ranges);
-          setEstimatedCycles(data.estimated_cycles?.toString() ?? "");
-          setClimbCapability(data.climb_capability ?? "");
-          setFuelOutput(data.fuel_output ?? "");
-          setAutoDescription(data.auto_description ?? "");
-          setAutoFuelScored(data.auto_fuel_scored?.toString() ?? "");
-          setNotes(data.notes ?? "");
-        }
+    const loadExistingPitScout = async () => {
+      setLoading(true);
+      setError(null);
+
+      const supabase = createClient();
+      const { data, error: fetchError } = await supabase
+        .from("pit_scout_entries")
+        .select("*")
+        .eq("org_id", orgId)
+        .eq("event_id", eventId)
+        .eq("team_number", teamNumber)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (fetchError) {
+        setError("Failed to load existing pit scout data.");
         setLoading(false);
-      });
-  }, [open, orgId, eventId, teamNumber]);
+        return;
+      }
+
+      if (data) {
+        setExistingId(data.id);
+        setDrivetrain(data.drivetrain ?? "");
+        setWidth(data.width_inches?.toString() ?? "");
+        setLength(data.length_inches?.toString() ?? "");
+        setHeight(data.height_inches?.toString() ?? "");
+        const intake = Array.isArray(data.intake_types) ? data.intake_types as string[] : [];
+        setIntakeTypes(intake);
+        const ranges = Array.isArray(data.scoring_ranges) ? data.scoring_ranges as string[] : [];
+        setScoringRanges(ranges);
+        setEstimatedCycles(data.estimated_cycles?.toString() ?? "");
+        setClimbCapability(data.climb_capability ?? "");
+        setFuelOutput(data.fuel_output ?? "");
+        setAutoDescription(data.auto_description ?? "");
+        setAutoFuelScored(data.auto_fuel_scored?.toString() ?? "");
+        setNotes(data.notes ?? "");
+        setCustomData(parseCustomData(data.custom_data, customSections));
+      }
+
+      setLoading(false);
+    };
+
+    void loadExistingPitScout();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, orgId, eventId, teamNumber, customSections]);
+
+  const updateCustomFieldValue = (fieldId: string, value: CustomFieldValue | undefined) => {
+    setCustomData((prev) => {
+      const next = { ...prev };
+      if (value === undefined) delete next[fieldId];
+      else next[fieldId] = value;
+      return next;
+    });
+  };
+
+  const renderCustomField = (field: CustomFieldDef) => {
+    const currentValue = customData[field.id];
+
+    switch (field.type) {
+      case "counter": {
+        const min = field.min ?? 0;
+        const max = field.max ?? 99;
+        const value =
+          typeof currentValue === "number" && Number.isFinite(currentValue)
+            ? clampNumber(Math.trunc(currentValue), min, max)
+            : min;
+
+        return (
+          <div key={field.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <CounterButton
+              label={field.label}
+              value={value}
+              min={min}
+              max={max}
+              onChange={(next) => updateCustomFieldValue(field.id, next)}
+            />
+          </div>
+        );
+      }
+      case "toggle": {
+        const value = currentValue === true;
+        return (
+          <div key={field.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-medium text-gray-200">{field.label}</span>
+              <ToggleButton
+                selected={value}
+                onClick={() => updateCustomFieldValue(field.id, value ? undefined : true)}
+              >
+                {value ? "Yes" : "No"}
+              </ToggleButton>
+            </div>
+          </div>
+        );
+      }
+      case "multi-select": {
+        const options = field.options ?? [];
+        const value = Array.isArray(currentValue) ? currentValue : [];
+        return (
+          <fieldset key={field.id} className="space-y-2">
+            <legend className={LEGEND}>{field.label}</legend>
+            <div className="flex flex-wrap gap-2">
+              {options.map((option) => (
+                <ToggleButton
+                  key={option.key}
+                  selected={value.includes(option.key)}
+                  onClick={() => {
+                    const next = value.includes(option.key)
+                      ? value.filter((item) => item !== option.key)
+                      : [...value, option.key];
+                    updateCustomFieldValue(field.id, next.length > 0 ? next : undefined);
+                  }}
+                >
+                  {option.label}
+                </ToggleButton>
+              ))}
+            </div>
+          </fieldset>
+        );
+      }
+      case "rating": {
+        const maxStars = field.maxStars ?? 5;
+        const value =
+          typeof currentValue === "number" && Number.isFinite(currentValue)
+            ? clampNumber(Math.trunc(currentValue), 0, maxStars)
+            : 0;
+        return (
+          <fieldset key={field.id} className="space-y-2">
+            <legend className={LEGEND}>{field.label}</legend>
+            <div className="flex flex-wrap gap-1">
+              {Array.from({ length: maxStars }, (_, idx) => idx + 1).map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => updateCustomFieldValue(field.id, value === star ? undefined : star)}
+                  className="text-2xl transition-transform hover:scale-105"
+                  aria-label={`${star} of ${maxStars} stars`}
+                >
+                  <span className={star <= value ? "text-yellow-400" : "text-gray-600"}>&#9733;</span>
+                </button>
+              ))}
+            </div>
+          </fieldset>
+        );
+      }
+      case "text": {
+        const value = typeof currentValue === "string" ? currentValue : "";
+        return (
+          <div key={field.id}>
+            <label className="block text-xs text-gray-400 mb-1">{field.label}</label>
+            <textarea
+              value={value}
+              onChange={(e) => updateCustomFieldValue(field.id, e.target.value)}
+              placeholder={field.placeholder ?? "Add notes"}
+              rows={3}
+              className={TEXTAREA}
+            />
+          </div>
+        );
+      }
+    }
+  };
+
+  const renderSection = (sectionId: string) => {
+    if (!isPitSectionId(sectionId)) {
+      const section = customSectionsById[sectionId];
+      if (!section) return null;
+
+      return (
+        <div key={section.id} className="space-y-4 border-t border-white/5 pt-5">
+          <div>
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-cyan-300">
+              {section.title}
+            </h3>
+            {section.description?.trim() ? (
+              <p className="mt-1 text-sm text-gray-400">{section.description}</p>
+            ) : null}
+          </div>
+          <div className="space-y-3">
+            {section.fields.map((field) => renderCustomField(field))}
+          </div>
+        </div>
+      );
+    }
+
+    const meta = PIT_SECTION_META[sectionId];
+
+    switch (sectionId) {
+      case "build":
+        return (
+          <div key={sectionId} className="space-y-4">
+            <h3 className={`${SECTION_LABEL} ${meta.accent}`}>{meta.title}</h3>
+
+            <fieldset>
+              <legend className={LEGEND}>Drivetrain</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {config.drivetrainOptions.map((opt) => (
+                  <ToggleButton
+                    key={opt}
+                    selected={drivetrain === opt}
+                    onClick={() => setDrivetrain(drivetrain === opt ? "" : opt)}
+                  >
+                    {opt}
+                  </ToggleButton>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className={LEGEND}>Robot Dimensions (inches)</legend>
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: "Width", value: width, setter: setWidth },
+                  { label: "Length", value: length, setter: setLength },
+                  { label: "Height", value: height, setter: setHeight },
+                ].map(({ label, value, setter }) => (
+                  <div key={label}>
+                    <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      value={value}
+                      onChange={(e) => setter(e.target.value)}
+                      placeholder="0"
+                      className={INPUT}
+                    />
+                  </div>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+        );
+      case "scoring":
+        return (
+          <div key={sectionId} className="space-y-4 border-t border-white/5 pt-5">
+            <h3 className={`${SECTION_LABEL} ${meta.accent}`}>{meta.title}</h3>
+
+            <fieldset>
+              <legend className={LEGEND}>Intake Type</legend>
+              <div className="flex gap-2">
+                {config.intakeOptions.map((opt) => (
+                  <ToggleButton
+                    key={opt.key}
+                    selected={intakeTypes.includes(opt.key)}
+                    onClick={() => toggleArrayValue(intakeTypes, opt.key, setIntakeTypes)}
+                    className="flex-1"
+                  >
+                    {opt.label}
+                  </ToggleButton>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className={LEGEND}>Scoring Range</legend>
+              <div className="flex gap-2 mb-3">
+                {config.scoringRangeOptions.map((opt) => (
+                  <ToggleButton
+                    key={opt.key}
+                    selected={scoringRanges.includes(opt.key)}
+                    onClick={() => toggleArrayValue(scoringRanges, opt.key, setScoringRanges)}
+                    className="flex-1"
+                  >
+                    {opt.label}
+                  </ToggleButton>
+                ))}
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Estimated cycles per match</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={estimatedCycles}
+                  onChange={(e) => setEstimatedCycles(e.target.value)}
+                  placeholder="0"
+                  className={`${INPUT} max-w-[120px]`}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className={LEGEND}>Shooter Output</legend>
+              <div className="grid grid-cols-3 gap-2">
+                {config.fuelOutputOptions.map((opt) => (
+                  <ToggleButton
+                    key={opt}
+                    selected={fuelOutput === opt}
+                    onClick={() => setFuelOutput(fuelOutput === opt ? "" : opt)}
+                  >
+                    {opt}
+                  </ToggleButton>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+        );
+      case "endgame":
+        return (
+          <div key={sectionId} className="space-y-4 border-t border-white/5 pt-5">
+            <h3 className={`${SECTION_LABEL} ${meta.accent}`}>{meta.title}</h3>
+
+            <fieldset>
+              <legend className={LEGEND}>Climb Capability</legend>
+              <div className="grid grid-cols-4 gap-2">
+                {config.climbOptions.map((opt) => (
+                  <ToggleButton
+                    key={opt}
+                    selected={climbCapability === opt}
+                    onClick={() => setClimbCapability(climbCapability === opt ? "" : opt)}
+                  >
+                    {opt}
+                  </ToggleButton>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+        );
+      case "auto_notes":
+        return (
+          <div key={sectionId} className="space-y-4 border-t border-white/5 pt-5">
+            <h3 className={`${SECTION_LABEL} ${meta.accent}`}>{meta.title}</h3>
+
+            <fieldset>
+              <legend className={LEGEND}>Auto Routine</legend>
+              <textarea
+                value={autoDescription}
+                onChange={(e) => setAutoDescription(e.target.value)}
+                placeholder="What does their auto do?"
+                rows={2}
+                className={TEXTAREA}
+              />
+              <div className="mt-2">
+                <label className="block text-xs text-gray-400 mb-1">FUEL scored in auto</label>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={autoFuelScored}
+                  onChange={(e) => setAutoFuelScored(e.target.value)}
+                  placeholder="0"
+                  className={`${INPUT} max-w-[120px]`}
+                />
+              </div>
+            </fieldset>
+
+            <fieldset>
+              <legend className={LEGEND}>What stood out about this team?</legend>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Build quality, driver skill, strategy preferences, known issues..."
+                rows={3}
+                className={TEXTAREA}
+              />
+            </fieldset>
+          </div>
+        );
+    }
+  };
 
   function toggleArrayValue(arr: string[], val: string, setter: (v: string[]) => void) {
     setter(arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val]);
@@ -179,6 +677,7 @@ export function PitScoutButton({
       auto_description: autoDescription.trim() || null,
       auto_fuel_scored: autoFuelScored ? parseInt(autoFuelScored, 10) : null,
       notes: notes.trim() || null,
+      custom_data: Object.keys(customDataPayload).length > 0 ? customDataPayload : null,
     };
 
     // Offline path: save to IndexedDB queue
@@ -202,11 +701,25 @@ export function PitScoutButton({
 
     // Online path: save directly to Supabase
     const supabase = createClient();
-    const result = existingId
-      ? await supabase.from("pit_scout_entries").update(entry).eq("id", existingId)
-      : await supabase.from("pit_scout_entries").upsert(entry, {
-          onConflict: "org_id,event_id,team_number",
-        });
+    let payload = { ...entry };
+    let result: { error: { message: string } | null } = { error: null };
+    let attempts = 0;
+
+    while (attempts < 3) {
+      result = existingId
+        ? await supabase.from("pit_scout_entries").update(payload).eq("id", existingId)
+        : await supabase.from("pit_scout_entries").upsert(payload, {
+            onConflict: "org_id,event_id,team_number",
+          });
+
+      if (!result.error) break;
+
+      const nextPayload = stripUnsupportedPitColumns(payload, result.error.message);
+      const changed = Object.keys(nextPayload).length < Object.keys(payload).length;
+      if (!changed) break;
+      payload = nextPayload;
+      attempts += 1;
+    }
 
     if (result.error) {
       setError(result.error.message);
@@ -298,7 +811,7 @@ export function PitScoutButton({
                   <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-white/10">
                     <div
                       className="h-full rounded-full bg-teal-500 transition-all duration-300 ease-out"
-                      style={{ width: `${(filledCount / totalFields) * 100}%` }}
+                      style={{ width: `${progressPercent}%` }}
                     />
                   </div>
                 </div>
@@ -316,170 +829,13 @@ export function PitScoutButton({
                           {error}
                         </div>
                       )}
-
-                      {/* ── Robot Build ── */}
-                      <div className="space-y-4">
-                        <h3 className={SECTION_LABEL}>Robot Build</h3>
-
-                        <fieldset>
-                          <legend className={LEGEND}>Drivetrain</legend>
-                          <div className="grid grid-cols-2 gap-2">
-                            {config.drivetrainOptions.map((opt) => (
-                              <ToggleButton
-                                key={opt}
-                                selected={drivetrain === opt}
-                                onClick={() => setDrivetrain(drivetrain === opt ? "" : opt)}
-                              >
-                                {opt}
-                              </ToggleButton>
-                            ))}
-                          </div>
-                        </fieldset>
-
-                        <fieldset>
-                          <legend className={LEGEND}>Robot Dimensions (inches)</legend>
-                          <div className="grid grid-cols-3 gap-3">
-                            {[
-                              { label: "Width", value: width, setter: setWidth },
-                              { label: "Length", value: length, setter: setLength },
-                              { label: "Height", value: height, setter: setHeight },
-                            ].map(({ label, value, setter }) => (
-                              <div key={label}>
-                                <label className="block text-xs text-gray-400 mb-1">{label}</label>
-                                <input
-                                  type="number"
-                                  inputMode="decimal"
-                                  value={value}
-                                  onChange={(e) => setter(e.target.value)}
-                                  placeholder="0"
-                                  className={INPUT}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </fieldset>
-                      </div>
-
-                      {/* ── Scoring ── */}
-                      <div className="space-y-4 border-t border-white/5 pt-5">
-                        <h3 className={SECTION_LABEL}>Scoring</h3>
-
-                        <fieldset>
-                          <legend className={LEGEND}>Intake Type</legend>
-                          <div className="flex gap-2">
-                            {config.intakeOptions.map((opt) => (
-                              <ToggleButton
-                                key={opt.key}
-                                selected={intakeTypes.includes(opt.key)}
-                                onClick={() => toggleArrayValue(intakeTypes, opt.key, setIntakeTypes)}
-                                className="flex-1"
-                              >
-                                {opt.label}
-                              </ToggleButton>
-                            ))}
-                          </div>
-                        </fieldset>
-
-                        <fieldset>
-                          <legend className={LEGEND}>Scoring Range</legend>
-                          <div className="flex gap-2 mb-3">
-                            {config.scoringRangeOptions.map((opt) => (
-                              <ToggleButton
-                                key={opt.key}
-                                selected={scoringRanges.includes(opt.key)}
-                                onClick={() => toggleArrayValue(scoringRanges, opt.key, setScoringRanges)}
-                                className="flex-1"
-                              >
-                                {opt.label}
-                              </ToggleButton>
-                            ))}
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-400 mb-1">Estimated cycles per match</label>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              value={estimatedCycles}
-                              onChange={(e) => setEstimatedCycles(e.target.value)}
-                              placeholder="0"
-                              className={`${INPUT} max-w-[120px]`}
-                            />
-                          </div>
-                        </fieldset>
-
-                        <fieldset>
-                          <legend className={LEGEND}>Shooter Output</legend>
-                          <div className="grid grid-cols-3 gap-2">
-                            {config.fuelOutputOptions.map((opt) => (
-                              <ToggleButton
-                                key={opt}
-                                selected={fuelOutput === opt}
-                                onClick={() => setFuelOutput(fuelOutput === opt ? "" : opt)}
-                              >
-                                {opt}
-                              </ToggleButton>
-                            ))}
-                          </div>
-                        </fieldset>
-                      </div>
-
-                      {/* ── Endgame ── */}
-                      <div className="space-y-4 border-t border-white/5 pt-5">
-                        <h3 className={SECTION_LABEL}>Endgame</h3>
-
-                        <fieldset>
-                          <legend className={LEGEND}>Climb Capability</legend>
-                          <div className="grid grid-cols-4 gap-2">
-                            {config.climbOptions.map((opt) => (
-                              <ToggleButton
-                                key={opt}
-                                selected={climbCapability === opt}
-                                onClick={() => setClimbCapability(climbCapability === opt ? "" : opt)}
-                              >
-                                {opt}
-                              </ToggleButton>
-                            ))}
-                          </div>
-                        </fieldset>
-                      </div>
-
-                      {/* ── Auto & Notes ── */}
-                      <div className="space-y-4 border-t border-white/5 pt-5">
-                        <h3 className={SECTION_LABEL}>Auto & Notes</h3>
-
-                        <fieldset>
-                          <legend className={LEGEND}>Auto Routine</legend>
-                          <textarea
-                            value={autoDescription}
-                            onChange={(e) => setAutoDescription(e.target.value)}
-                            placeholder="What does their auto do?"
-                            rows={2}
-                            className={TEXTAREA}
-                          />
-                          <div className="mt-2">
-                            <label className="block text-xs text-gray-400 mb-1">FUEL scored in auto</label>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              value={autoFuelScored}
-                              onChange={(e) => setAutoFuelScored(e.target.value)}
-                              placeholder="0"
-                              className={`${INPUT} max-w-[120px]`}
-                            />
-                          </div>
-                        </fieldset>
-
-                        <fieldset>
-                          <legend className={LEGEND}>What stood out about this team?</legend>
-                          <textarea
-                            value={notes}
-                            onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Build quality, driver skill, strategy preferences, known issues..."
-                            rows={3}
-                            className={TEXTAREA}
-                          />
-                        </fieldset>
-                      </div>
+                      {visibleSections.length > 0 ? (
+                        visibleSections.map((sectionId) => renderSection(sectionId))
+                      ) : (
+                        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-4 text-sm text-gray-400">
+                          All pit sections are currently hidden for this event. Re-enable sections from Form Customization to collect pit data.
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

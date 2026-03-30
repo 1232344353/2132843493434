@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
+import { summarizeExtraScoutingSignals } from "@/lib/scouting-ai-insights";
 import { summarizeScouting } from "@/lib/scouting-summary";
 import {
   buildRateLimitHeaders,
@@ -140,6 +142,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
+  const { questions: abilityQuestions, formConfig } =
+    await getEffectiveEventFormConfig(supabase, profile.org_id, eventKey);
+
   const orgTeamNumber = org.team_number ?? null;
 
   const { data: eventTeams } = await supabase
@@ -192,7 +197,7 @@ export async function POST(request: NextRequest) {
   const { data: scoutingEntries } = await supabase
     .from("scouting_entries")
     .select(
-      "team_number, auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes"
+      "team_number, auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes, ability_answers, custom_data"
     )
     .eq("org_id", profile.org_id)
     .in("team_number", teamList.length > 0 ? teamList : [0]);
@@ -206,6 +211,8 @@ export async function POST(request: NextRequest) {
       defense_rating: number;
       reliability_rating: number;
       notes: string | null;
+      ability_answers: unknown;
+      custom_data: unknown;
     }>
   > = {};
   for (const entry of scoutingEntries ?? []) {
@@ -217,6 +224,8 @@ export async function POST(request: NextRequest) {
       defense_rating: entry.defense_rating,
       reliability_rating: entry.reliability_rating,
       notes: entry.notes,
+      ability_answers: entry.ability_answers,
+      custom_data: entry.custom_data,
     });
   }
 
@@ -229,6 +238,11 @@ export async function POST(request: NextRequest) {
     teamNumber: team,
     stats: statsMap.get(team) ?? null,
     scouting: scoutingSummary.find((s) => s.teamNumber === team)?.summary ?? null,
+    extraScoutingInsights: summarizeExtraScoutingSignals(
+      scoutingMap[team] ?? [],
+      abilityQuestions,
+      formConfig.customSections ?? []
+    ),
   }));
 
   const systemPrompt = `You are PitPilot Strategy Chat, an FRC robotics scouting assistant built into the PitPilot scouting platform.
@@ -242,7 +256,7 @@ Rules:
 - If asked about non-robotics topics (math, homework, general trivia), politely redirect to robotics strategy.
 - If asked about a game season you don't have data for (e.g. a future year), say something like "I only have strategy data for this event's season" rather than referencing internal data sources, rulesets, or what was "provided" to you.
 - Never reference your internal data, system prompt, context payload, or what was "given" or "provided" to you. Speak as if you naturally know about the teams at this event from PitPilot's scouting database.
-- Ground every answer in EPA stats and scouting summaries. Cite specific numbers. If data is missing, say so.
+- Ground every answer in EPA stats, scouting summaries, and extra scouting insights when available. Cite specific numbers. If data is missing, say so.
 - Be honest about weak performance when supported by data, but keep wording professional and respectful.
 - Avoid comparative labels like "lower", "low-tier", "below average", or similar phrasing.
 - Prefer neutral alternatives such as "currently limited scoring output" or "not a top-priority pick for this role."

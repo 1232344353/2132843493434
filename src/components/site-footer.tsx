@@ -99,6 +99,9 @@ export function SiteFooter({ className = "" }: { className?: string }) {
             <Link href="/privacy" className="text-[11px] text-gray-500 transition hover:text-gray-300">
               Privacy
             </Link>
+            <Link href="/changelog" className="text-[11px] text-gray-500 transition hover:text-gray-300">
+              Changelog
+            </Link>
           </div>
         </div>
       </div>

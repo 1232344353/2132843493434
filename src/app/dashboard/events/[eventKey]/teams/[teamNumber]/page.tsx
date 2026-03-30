@@ -7,7 +7,8 @@ import { TeamAIBriefButton } from "./team-ai-brief-button";
 import { PitScoutButton } from "./pit-scout-button";
 import { TeamDetailCharts } from "./team-detail-charts";
 import { ExportCsvButton } from "@/components/export-csv-button";
-import { getScoutingFormConfig, getPitScoutFormConfig, buildLabelMap, resolveLabels } from "@/lib/platform-settings";
+import { buildLabelMap, resolveLabels, type CustomFieldDef, type CustomSection } from "@/lib/platform-settings";
+import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 import { RealtimeScoutingSection } from "./realtime-scouting-section";
 
 
@@ -153,12 +154,32 @@ export default async function TeamDetailPage({
     }
     return null;
   }
+  function toObject(val: unknown): Record<string, unknown> | null {
+    if (val && typeof val === "object" && !Array.isArray(val)) {
+      return val as Record<string, unknown>;
+    }
+    return null;
+  }
+  function formatPitCustomValue(field: CustomFieldDef, value: unknown): string | null {
+    switch (field.type) {
+      case "counter":
+      case "rating":
+        return typeof value === "number" && Number.isFinite(value) ? String(value) : null;
+      case "toggle":
+        return typeof value === "boolean" ? (value ? "Yes" : "No") : null;
+      case "multi-select":
+        if (!Array.isArray(value)) return null;
+        return value
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => field.options?.find((option) => option.key === item)?.label ?? item)
+          .join(", ") || null;
+      case "text":
+        return typeof value === "string" && value.trim() ? value.trim() : null;
+    }
+  }
 
   // Fetch form config for label resolution
-  const [formConfig, pitScoutConfig] = await Promise.all([
-    getScoutingFormConfig(supabase),
-    getPitScoutFormConfig(supabase),
-  ]);
+  const { formConfig, pitScoutConfig } = await getEffectiveEventFormConfig(supabase, profile.org_id, eventKey);
   const intakeLabelMap = buildLabelMap(formConfig.intakeOptions);
   const climbLabelMap = buildLabelMap(formConfig.climbLevelOptions);
   const shootingLabelMap = buildLabelMap(formConfig.shootingRangeOptions);
@@ -250,6 +271,20 @@ export default async function TeamDetailPage({
     .eq("event_id", event.id)
     .eq("team_number", teamNumber)
     .maybeSingle();
+  const pitCustomSections = pitScoutConfig.customSections ?? [];
+  const pitCustomData = toObject(pitScout?.custom_data);
+  const pitCustomSectionsWithValues = pitCustomSections
+    .map((section: CustomSection) => ({
+      ...section,
+      values: section.fields
+        .map((field) => ({
+          id: field.id,
+          label: field.label,
+          value: formatPitCustomValue(field, pitCustomData?.[field.id]),
+        }))
+        .filter((item) => item.value),
+    }))
+    .filter((section) => section.values.length > 0);
 
   const eventTitle = event.year ? `${event.year} ${event.name}` : event.name;
 
@@ -285,7 +320,6 @@ export default async function TeamDetailPage({
           <div className="flex gap-2">
             <PitScoutButton
               eventId={event.id}
-              eventKey={eventKey}
               teamNumber={teamNumber}
               orgId={profile.org_id}
               userId={user.id}
@@ -449,6 +483,23 @@ export default async function TeamDetailPage({
                   <p className="text-sm text-gray-200">{pitScout.notes}</p>
                 </div>
               )}
+
+              {pitCustomSectionsWithValues.map((section) => (
+                <div key={section.id} className="rounded-xl bg-white/5 p-3">
+                  <p className="text-xs font-medium text-gray-400 mb-1">{section.title}</p>
+                  {section.description?.trim() ? (
+                    <p className="mb-2 text-xs text-gray-500">{section.description}</p>
+                  ) : null}
+                  <div className="space-y-1.5">
+                    {section.values.map((item) => (
+                      <div key={item.id} className="flex flex-wrap items-start justify-between gap-2">
+                        <span className="text-xs text-gray-400">{item.label}</span>
+                        <span className="text-sm text-gray-200">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -5,7 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/navbar";
 import { AnalyticsDashboard } from "./analytics-dashboard";
 import { AnalyticsTour } from "./analytics-tour";
-import { getScoutingFormConfig, buildLabelMap, resolveLabels } from "@/lib/platform-settings";
+import { buildLabelMap, resolveLabels } from "@/lib/platform-settings";
+import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 
 export async function generateMetadata({
   params,
@@ -162,7 +163,7 @@ export default async function AnalyticsPage({
   }
 
   // Fetch form config for label resolution
-  const formConfig = await getScoutingFormConfig(supabase);
+  const { formConfig } = await getEffectiveEventFormConfig(supabase, profile.org_id, eventKey);
   const intakeLabelMap = buildLabelMap(formConfig.intakeOptions);
   const climbLabelMap = buildLabelMap(formConfig.climbLevelOptions);
   const shootingLabelMap = buildLabelMap(formConfig.shootingRangeOptions);

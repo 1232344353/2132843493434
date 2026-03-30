@@ -39,6 +39,7 @@ export async function updateSession(request: NextRequest) {
     "/login",
     "/signup",
     "/privacy",
+    "/changelog",
     "/contact",
     "/auth/callback",
     "/api/health",
@@ -64,6 +65,28 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Check onboarding/org status for dashboard routes
+  const isDashboardPath = request.nextUrl.pathname.startsWith("/dashboard");
+  if (user && isDashboardPath) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("org_id, onboarding_complete, is_staff")
+      .eq("id", user.id)
+      .single();
+
+    if (profile && !profile.is_staff && !profile.org_id) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/join";
+      return NextResponse.redirect(url);
+    }
+
+    if (profile && !profile.is_staff && profile.org_id && !profile.onboarding_complete) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

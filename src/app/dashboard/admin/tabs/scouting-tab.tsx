@@ -225,80 +225,57 @@ function StringListEditor({
 
 /* ── Main Scouting Tab ── */
 
+type TabId = "match" | "pit";
+
 export function ScoutingTab({
   scoutingAbilityQuestions,
   formConfig,
   pitScoutConfig,
 }: ScoutingTabProps) {
   const router = useRouter();
-  const [status, setStatus] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>("match");
+  const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Ability questions state (moved from overview tab)
   const [questions, setQuestions] = useState<string[]>(
     scoutingAbilityQuestions.length > 0 ? scoutingAbilityQuestions : [""]
   );
-
-  // Form config state
   const [intakeOptions, setIntakeOptions] = useState<FormOptionItem[]>(formConfig.intakeOptions);
   const [climbLevelOptions, setClimbLevelOptions] = useState<FormOptionItem[]>(formConfig.climbLevelOptions);
   const [shootingRangeOptions, setShootingRangeOptions] = useState<FormOptionItem[]>(formConfig.shootingRangeOptions);
   const [autoStartPositions, setAutoStartPositions] = useState<string[]>(formConfig.autoStartPositions);
   const [ratingFields, setRatingFields] = useState<FormOptionItem[]>(formConfig.ratingFields);
 
-  // Pit scout config state
   const [pitDrivetrainOptions, setPitDrivetrainOptions] = useState<string[]>(pitScoutConfig.drivetrainOptions);
   const [pitIntakeOptions, setPitIntakeOptions] = useState<FormOptionItem[]>(pitScoutConfig.intakeOptions);
   const [pitScoringRangeOptions, setPitScoringRangeOptions] = useState<FormOptionItem[]>(pitScoutConfig.scoringRangeOptions);
   const [pitClimbOptions, setPitClimbOptions] = useState<string[]>(pitScoutConfig.climbOptions);
   const [pitFuelOutputOptions, setPitFuelOutputOptions] = useState<string[]>(pitScoutConfig.fuelOutputOptions);
 
-  const showStatus = useCallback((msg: string) => {
-    setStatus(msg);
-    setTimeout(() => setStatus(null), 3000);
+  const showStatus = useCallback((msg: string, ok = true) => {
+    setStatus({ msg, ok });
+    setTimeout(() => setStatus(null), 3500);
   }, []);
 
-  async function handleSaveQuestions() {
-    const normalized = questions
-      .map((q) => q.trim().replace(/\s+/g, " "))
-      .filter((q) => q.length > 0);
+  async function handleSaveMatch() {
+    const config: ScoutingFormConfig = { intakeOptions, climbLevelOptions, shootingRangeOptions, autoStartPositions, ratingFields };
+    const normalized = questions.map((q) => q.trim().replace(/\s+/g, " ")).filter((q) => q.length > 0);
 
-    const formData = new FormData();
-    formData.set("questionsJson", JSON.stringify(normalized));
+    const fd = new FormData();
+    fd.set("formConfigJson", JSON.stringify(config));
+    const r1 = await updateScoutingFormConfig(fd);
+    if (r1?.error) { showStatus(r1.error, false); return; }
 
-    const result = await updateScoutingAbilityQuestions(formData);
-    if (result?.error) {
-      showStatus(result.error);
-      return;
-    }
+    const fd2 = new FormData();
+    fd2.set("questionsJson", JSON.stringify(normalized));
+    const r2 = await updateScoutingAbilityQuestions(fd2);
+    if (r2?.error) { showStatus(r2.error, false); return; }
 
-    showStatus("Ability questions saved.");
+    showStatus("Match scouting form saved.");
     startTransition(() => router.refresh());
   }
 
-  async function handleSaveFormConfig() {
-    const config: ScoutingFormConfig = {
-      intakeOptions,
-      climbLevelOptions,
-      shootingRangeOptions,
-      autoStartPositions,
-      ratingFields,
-    };
-
-    const formData = new FormData();
-    formData.set("formConfigJson", JSON.stringify(config));
-
-    const result = await updateScoutingFormConfig(formData);
-    if (result?.error) {
-      showStatus(result.error);
-      return;
-    }
-
-    showStatus("Scouting form config saved.");
-    startTransition(() => router.refresh());
-  }
-
-  async function handleSavePitScoutConfig() {
+  async function handleSavePit() {
     const config: PitScoutFormConfig = {
       drivetrainOptions: pitDrivetrainOptions,
       intakeOptions: pitIntakeOptions,
@@ -306,288 +283,152 @@ export function ScoutingTab({
       climbOptions: pitClimbOptions,
       fuelOutputOptions: pitFuelOutputOptions,
     };
-
-    const formData = new FormData();
-    formData.set("pitScoutConfigJson", JSON.stringify(config));
-
-    const result = await updatePitScoutFormConfig(formData);
-    if (result?.error) {
-      showStatus(result.error);
-      return;
-    }
-
-    showStatus("Pit scout config saved.");
+    const fd = new FormData();
+    fd.set("pitScoutConfigJson", JSON.stringify(config));
+    const result = await updatePitScoutFormConfig(fd);
+    if (result?.error) { showStatus(result.error, false); return; }
+    showStatus("Pit scout form saved.");
     startTransition(() => router.refresh());
   }
 
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "match", label: "Match Scouting" },
+    { id: "pit", label: "Pit Scouting" },
+  ];
+
   return (
     <div>
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-400">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-          </svg>
-        </div>
-        <div>
-          <h2 className="text-xl font-bold text-white">Scouting Form Editor</h2>
-          <p className="text-sm text-gray-400">Customize every section of the scouting form.</p>
-        </div>
-      </div>
-
       {status && (
-        <div className="mt-4 rounded-xl dashboard-panel px-4 py-3 text-sm font-medium text-teal-200 border-teal-500/30 bg-teal-500/10">
+        <div className={`mb-6 rounded-xl px-4 py-3 text-sm font-medium dashboard-panel ${status.ok ? "border-teal-500/30 bg-teal-500/10 text-teal-200" : "border-red-500/30 bg-red-500/10 text-red-200"}`}>
           <div className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-teal-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            {status}
+            {status.ok ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-teal-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-red-400"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            )}
+            {status.msg}
           </div>
         </div>
       )}
 
-      {/* ── Form Field Options ── */}
-      <div className="mt-6 rounded-2xl dashboard-panel dashboard-card p-5 space-y-8">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-300">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-              <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>
-            </svg>
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-white">Form Field Options</h3>
-            <p className="mt-1 text-sm text-gray-400">
-              Customize the multi-select buttons and option groups shown on the scouting form. Each item has a <code className="rounded bg-white/5 px-1 text-xs text-gray-300">key</code> (stored in the database) and a <code className="rounded bg-white/5 px-1 text-xs text-gray-300">label</code> (shown to scouts).
-            </p>
-          </div>
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <OptionListEditor
-            title="Intake Methods"
-            description="Teleop section: multi-select buttons for how the robot picks up game pieces."
-            items={intakeOptions}
-            onChange={setIntakeOptions}
-            keyPlaceholder="e.g. ground"
-            labelPlaceholder="e.g. Ground Intake"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <OptionListEditor
-            title="Climb Levels"
-            description="Endgame section: multi-select buttons for climb stages the robot can reach."
-            items={climbLevelOptions}
-            onChange={setClimbLevelOptions}
-            keyPlaceholder="e.g. level_1"
-            labelPlaceholder="e.g. Level 1"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <OptionListEditor
-            title="Shooting Ranges"
-            description="Ratings section: multi-select buttons for effective shooting distances."
-            items={shootingRangeOptions}
-            onChange={setShootingRangeOptions}
-            keyPlaceholder="e.g. close"
-            labelPlaceholder="e.g. Close Range"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <StringListEditor
-            title="Auto Start Positions"
-            description="Autonomous section: position buttons for where the robot starts."
-            items={autoStartPositions}
-            onChange={setAutoStartPositions}
-            placeholder="e.g. left"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <OptionListEditor
-            title="Star Rating Fields"
-            description="Ratings section: star-rating categories. Key must be one of: defense, cycle_time, shooting_reliability, reliability."
-            items={ratingFields}
-            onChange={setRatingFields}
-            keyPlaceholder="e.g. defense"
-            labelPlaceholder="e.g. Defense Ability"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6 flex flex-wrap items-center gap-3">
-          <Button
+      {/* Tabs */}
+      <div className="mb-6 flex gap-1 rounded-xl border border-white/10 bg-white/5 p-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
             type="button"
-            size="sm"
-            loading={isPending}
-            onClick={handleSaveFormConfig}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition ${
+              activeTab === tab.id ? "bg-white/10 text-white" : "text-gray-400 hover:text-gray-200"
+            }`}
           >
-            Save form config
-          </Button>
-          <p className="text-xs text-gray-500">
-            Changes apply to all new scouting sessions.
-          </p>
-        </div>
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {/* ── Pit Scout Config ── */}
-      <div className="mt-6 rounded-2xl dashboard-panel dashboard-card p-5 space-y-8">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-300">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 20h9" />
-              <path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.855z" />
-            </svg>
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-white">Pit Scout Form</h3>
-            <p className="mt-1 text-sm text-gray-400">
-              Customize the options shown on the pit scouting form (accessed from team profiles).
-            </p>
-          </div>
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <StringListEditor
-            title="Drivetrain Options"
-            description="Single-select buttons for robot drivetrain type."
-            items={pitDrivetrainOptions}
-            onChange={setPitDrivetrainOptions}
-            placeholder="e.g. Swerve"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <OptionListEditor
-            title="Intake Types"
-            description="Multi-select buttons for how the robot picks up game pieces."
-            items={pitIntakeOptions}
-            onChange={setPitIntakeOptions}
-            keyPlaceholder="e.g. ground"
-            labelPlaceholder="e.g. Ground"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <OptionListEditor
-            title="Scoring Ranges"
-            description="Multi-select buttons for effective scoring distances."
-            items={pitScoringRangeOptions}
-            onChange={setPitScoringRangeOptions}
-            keyPlaceholder="e.g. close"
-            labelPlaceholder="e.g. Close"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <StringListEditor
-            title="Climb Options"
-            description="Single-select buttons for climb capability."
-            items={pitClimbOptions}
-            onChange={setPitClimbOptions}
-            placeholder="e.g. Level 1"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6">
-          <StringListEditor
-            title="Shooter Output Options"
-            description="Single-select buttons for shooter output volume."
-            items={pitFuelOutputOptions}
-            onChange={setPitFuelOutputOptions}
-            placeholder="e.g. Moderate"
-          />
-        </div>
-
-        <div className="border-t border-white/5 pt-6 flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            size="sm"
-            loading={isPending}
-            onClick={handleSavePitScoutConfig}
-          >
-            Save pit scout config
-          </Button>
-          <p className="text-xs text-gray-500">
-            Changes apply to all new pit scouting sessions.
-          </p>
-        </div>
-      </div>
-
-      {/* ── Ability Questions ── */}
-      <div className="mt-6 rounded-2xl dashboard-panel dashboard-card p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 11h6" />
-              <path d="M9 15h6" />
-              <path d="M5 7h14" />
-              <path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
-            </svg>
-          </div>
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-white">Ability Questions</h3>
-            <p className="mt-1 text-sm text-gray-400">
-              Yes/No ability questions shown at the end of every scouting form.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 space-y-2">
-          {questions.map((question, index) => (
-            <div key={`question-${index}`} className="flex items-center gap-2">
-              <input
-                type="text"
-                value={question}
-                onChange={(e) =>
-                  setQuestions((prev) =>
-                    prev.map((item, i) => (i === index ? e.target.value : item))
-                  )
-                }
-                placeholder="e.g. Can cross the charge station?"
-                className="dashboard-input w-full px-3 py-2 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() =>
-                  setQuestions((prev) =>
-                    prev.length <= 1
-                      ? [""]
-                      : prev.filter((_, i) => i !== index)
-                  )
-                }
-                className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-semibold text-red-200 transition hover:bg-red-500/20"
-              >
-                Remove
-              </button>
+      {/* Match Scouting tab */}
+      {activeTab === "match" && (
+        <div className="space-y-6">
+          <div className="rounded-2xl dashboard-panel dashboard-card p-5 space-y-8">
+            <div>
+              <h3 className="text-base font-semibold text-white">Form Field Options</h3>
+              <p className="mt-1 text-sm text-gray-400">
+                Default options for multi-select groups on the match scouting form. Each item needs a <code className="rounded bg-white/5 px-1 text-xs text-gray-300">key</code> (stored in DB) and a <code className="rounded bg-white/5 px-1 text-xs text-gray-300">label</code> (shown to scouts).
+              </p>
             </div>
-          ))}
+            <div className="border-t border-white/5 pt-6">
+              <OptionListEditor title="Intake Methods" description="Teleop: how the robot picks up game pieces." items={intakeOptions} onChange={setIntakeOptions} keyPlaceholder="e.g. ground" labelPlaceholder="e.g. Ground Intake" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <OptionListEditor title="Climb Levels" description="Endgame: climb stages the robot can reach." items={climbLevelOptions} onChange={setClimbLevelOptions} keyPlaceholder="e.g. level_1" labelPlaceholder="e.g. Level 1" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <OptionListEditor title="Shooting Ranges" description="Ratings: effective shooting distances." items={shootingRangeOptions} onChange={setShootingRangeOptions} keyPlaceholder="e.g. close" labelPlaceholder="e.g. Close Range" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <StringListEditor title="Auto Start Positions" description="Autonomous: position buttons for robot start." items={autoStartPositions} onChange={setAutoStartPositions} placeholder="e.g. left" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <OptionListEditor title="Star Rating Fields" description="Ratings: star-rating categories. Key must be one of: defense, cycle_time, shooting_reliability, reliability." items={ratingFields} onChange={setRatingFields} keyPlaceholder="e.g. defense" labelPlaceholder="e.g. Defense Ability" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <div className="space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-white">Ability Questions</h4>
+                  <p className="mt-0.5 text-xs text-gray-400">Yes/No questions shown at the end of every scouting form.</p>
+                </div>
+                <div className="space-y-2">
+                  {questions.map((question, index) => (
+                    <div key={`question-${index}`} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={question}
+                        onChange={(e) => setQuestions((prev) => prev.map((item, i) => (i === index ? e.target.value : item)))}
+                        placeholder="e.g. Can cross the charge station?"
+                        className="dashboard-input w-full px-3 py-2 text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setQuestions((prev) => prev.length <= 1 ? [""] : prev.filter((_, i) => i !== index))}
+                        className="rounded-lg border border-red-400/30 bg-red-500/10 p-1.5 text-red-300 transition hover:bg-red-500/20"
+                        aria-label="Remove"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" onClick={() => setQuestions((prev) => [...prev, ""])} className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:bg-white/10">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add question
+                </button>
+              </div>
+            </div>
+            <div className="border-t border-white/5 pt-6 flex flex-wrap items-center gap-3">
+              <Button type="button" size="sm" loading={isPending} onClick={handleSaveMatch}>
+                Save match form
+              </Button>
+              <p className="text-xs text-gray-500">These are global defaults. Captains can override per event.</p>
+            </div>
+          </div>
         </div>
+      )}
 
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setQuestions((prev) => [...prev, ""])}
-          >
-            Add question
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            loading={isPending}
-            onClick={handleSaveQuestions}
-          >
-            Save ability questions
-          </Button>
-          <p className="text-xs text-gray-500">
-            These render as Yes/No ability toggles on scout forms.
-          </p>
+      {/* Pit Scouting tab */}
+      {activeTab === "pit" && (
+        <div className="space-y-6">
+          <div className="rounded-2xl dashboard-panel dashboard-card p-5 space-y-8">
+            <div>
+              <h3 className="text-base font-semibold text-white">Pit Scout Form Options</h3>
+              <p className="mt-1 text-sm text-gray-400">
+                Default options shown on the pit scouting form, accessed from each team&apos;s profile page.
+              </p>
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <StringListEditor title="Drivetrain Options" description="Single-select buttons for robot drivetrain type." items={pitDrivetrainOptions} onChange={setPitDrivetrainOptions} placeholder="e.g. Swerve" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <OptionListEditor title="Intake Types" description="Multi-select buttons for how the robot picks up game pieces." items={pitIntakeOptions} onChange={setPitIntakeOptions} keyPlaceholder="e.g. ground" labelPlaceholder="e.g. Ground" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <OptionListEditor title="Scoring Ranges" description="Multi-select buttons for effective scoring distances." items={pitScoringRangeOptions} onChange={setPitScoringRangeOptions} keyPlaceholder="e.g. close" labelPlaceholder="e.g. Close" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <StringListEditor title="Climb Options" description="Single-select buttons for climb capability." items={pitClimbOptions} onChange={setPitClimbOptions} placeholder="e.g. Level 1" />
+            </div>
+            <div className="border-t border-white/5 pt-6">
+              <StringListEditor title="Shooter Output Options" description="Single-select buttons for shooter output volume." items={pitFuelOutputOptions} onChange={setPitFuelOutputOptions} placeholder="e.g. Moderate" />
+            </div>
+            <div className="border-t border-white/5 pt-6 flex flex-wrap items-center gap-3">
+              <Button type="button" size="sm" loading={isPending} onClick={handleSavePit}>
+                Save pit form
+              </Button>
+              <p className="text-xs text-gray-500">These are global defaults. Captains can override per event.</p>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

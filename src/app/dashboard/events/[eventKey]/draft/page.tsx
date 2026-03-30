@@ -5,7 +5,7 @@ import { fetchEventRankings } from "@/lib/tba";
 import { Navbar } from "@/components/navbar";
 import type { PickListContent } from "@/types/strategy";
 import { DraftRoom } from "./draft-room";
-import { getScoutingFormConfig } from "@/lib/platform-settings";
+import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 import { DraftTour } from "./draft-tour";
 
 export default async function DraftRoomPage({
@@ -101,9 +101,9 @@ export default async function DraftRoomPage({
     .maybeSingle();
   const storageEnabled = !draftSessionError;
 
-  const [eventTitle, scoutingFormConfig] = await Promise.all([
+  const [eventTitle, { formConfig: scoutingFormConfig }] = await Promise.all([
     Promise.resolve(event.year ? `${event.year} ${event.name}` : event.name),
-    getScoutingFormConfig(supabase),
+    getEffectiveEventFormConfig(supabase, profile.org_id, eventKey),
   ]);
 
   return (

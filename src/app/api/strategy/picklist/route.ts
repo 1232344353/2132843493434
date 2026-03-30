@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { chatCompletionWithUsage } from "@/lib/openai";
+import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
+import { summarizeExtraScoutingSignals } from "@/lib/scouting-ai-insights";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PickListContentSchema, type PickListContent } from "@/types/strategy";
@@ -266,13 +268,17 @@ export async function POST(request: NextRequest) {
   // Get event
   const { data: event } = await supabase
     .from("events")
-    .select("id, name, year")
+    .select("id, name, year, tba_key")
     .eq("id", eventId)
     .single();
 
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
+
+  const { questions: abilityQuestions, formConfig } = event.tba_key
+    ? await getEffectiveEventFormConfig(supabase, profile.org_id, event.tba_key)
+    : { questions: [] as string[], formConfig: { customSections: [] } };
 
   // Get all team stats for this event
   const { data: stats } = await supabase
@@ -314,7 +320,7 @@ export async function POST(request: NextRequest) {
           await supabase
             .from("scouting_entries")
             .select(
-              "team_number, auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes"
+              "team_number, auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes, ability_answers, custom_data"
             )
             .eq("org_id", profile.org_id)
             .in("match_id", matchIds)
@@ -331,6 +337,8 @@ export async function POST(request: NextRequest) {
       defense_rating: number;
       reliability_rating: number;
       notes: string | null;
+      ability_answers: unknown;
+      custom_data: unknown;
     }>
   > = {};
   for (const e of scoutingEntries ?? []) {
@@ -342,6 +350,8 @@ export async function POST(request: NextRequest) {
       defense_rating: e.defense_rating,
       reliability_rating: e.reliability_rating,
       notes: e.notes,
+      ability_answers: e.ability_answers,
+      custom_data: e.custom_data,
     });
   }
 
@@ -365,6 +375,11 @@ export async function POST(request: NextRequest) {
     endgame_epa: s.endgame_epa,
     win_rate: s.win_rate,
     scoutingSummary: scoutingSummaryMap[s.team_number] ?? null,
+    extraScoutingInsights: summarizeExtraScoutingSignals(
+      scoutingMap[s.team_number] ?? [],
+      abilityQuestions,
+      formConfig.customSections ?? []
+    ),
   }));
 
   const orgTeamNumber = orgMeta?.team_number ?? null;
@@ -398,6 +413,7 @@ You will receive:
 - Optional profile data for the user's robot (starting positions, shooting ranges, intake abilities, cycle speed, reliability, preferred role, notes)
 - EPA (Expected Points Added) statistics from Statbotics for every team at the event
 - Scouting summaries per team: { count, avg_auto, avg_teleop, avg_endgame, avg_defense, avg_reliability, notes[] } or null if no data
+- Extra scouting insights per team from ability checks and custom form sections, as short natural-language signals when available
 
 Rank ALL teams at the event (excluding the user's team) from most desirable to least desirable alliance partner.
 
@@ -445,6 +461,7 @@ IMPORTANT:
 - Prefer neutral alternatives such as "currently limited scoring output" or "not a top-priority pick for this role."
 - If no scouting data exists for a team, base analysis on EPA stats only
 - If yourTeamProfile is provided, use it to improve synergy judgments and pick reasoning.
+- If extra scouting insights exist for a team, use them as supporting evidence, especially for role fit, constraints, and special capabilities.
 - If yourTeamProfile includes multiple shooting ranges or intake abilities, treat that as flexibility when evaluating fit.
 - If yourTeamProfile is missing/incomplete, proceed with available data and do not fabricate missing profile fields.
 - Role balance guidance:

@@ -51,7 +51,7 @@ export default function LoginPage() {
             </div>
             <h2 className="text-lg font-semibold text-white">Check your email</h2>
             <p className="mt-2 text-sm text-gray-400">
-              We sent a magic link to your email. Click the link to sign in.
+              We sent a magic link to your email. Click it to sign in.
             </p>
             <p className="mt-3 text-xs leading-relaxed text-gray-500">
               Didn&apos;t get it? Check your spam folder. Some school or
@@ -107,16 +107,20 @@ export default function LoginPage() {
           </div>
         )}
 
-        <p className="text-center text-sm text-gray-500">
-          We&apos;ll send you a magic link to sign in. No password needed.
-        </p>
-        <p className="text-center text-xs text-gray-500">
-          By continuing, you agree to our{" "}
-          <Link href="/privacy" className="text-teal-400 hover:text-teal-300">
-            Privacy Policy
-          </Link>
-          .
-        </p>
+        {!sent && (
+          <>
+            <p className="text-center text-sm text-gray-500">
+              We&apos;ll send you a magic link to sign in. No password needed.
+            </p>
+            <p className="text-center text-xs text-gray-500">
+              By continuing, you agree to our{" "}
+              <Link href="/privacy" className="text-teal-400 hover:text-teal-300">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

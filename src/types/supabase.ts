@@ -127,6 +127,47 @@ export type Database = {
           },
         ]
       }
+      event_form_configs: {
+        Row: {
+          id: string
+          org_id: string
+          event_key: string
+          questions: Json | null
+          form_config: Json | null
+          pit_scout_config: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          org_id: string
+          event_key: string
+          questions?: Json | null
+          form_config?: Json | null
+          pit_scout_config?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          org_id?: string
+          event_key?: string
+          questions?: Json | null
+          form_config?: Json | null
+          pit_scout_config?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_form_configs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -482,6 +523,7 @@ export type Database = {
           auto_description: string | null
           auto_fuel_scored: number | null
           notes: string | null
+          custom_data: Json | null
         }
         Insert: {
           id?: string
@@ -503,6 +545,7 @@ export type Database = {
           auto_description?: string | null
           auto_fuel_scored?: number | null
           notes?: string | null
+          custom_data?: Json | null
         }
         Update: {
           id?: string
@@ -524,6 +567,7 @@ export type Database = {
           auto_description?: string | null
           auto_fuel_scored?: number | null
           notes?: string | null
+          custom_data?: Json | null
         }
         Relationships: [
           {
@@ -556,6 +600,7 @@ export type Database = {
           auto_notes: string | null
           auto_score: number
           auto_start_position: string | null
+          custom_data: Json | null
           cycle_time_rating: number | null
           climb_levels: Json | null
           created_at: string
@@ -582,6 +627,7 @@ export type Database = {
           auto_notes?: string | null
           auto_score?: number
           auto_start_position?: string | null
+          custom_data?: Json | null
           cycle_time_rating?: number | null
           climb_levels?: Json | null
           created_at?: string
@@ -608,6 +654,7 @@ export type Database = {
           auto_notes?: string | null
           auto_score?: number
           auto_start_position?: string | null
+          custom_data?: Json | null
           cycle_time_rating?: number | null
           climb_levels?: Json | null
           created_at?: string

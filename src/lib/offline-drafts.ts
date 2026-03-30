@@ -37,15 +37,21 @@ export interface DraftFormData {
   auto_start_position: string | null;
   auto_notes: string;
   shooting_ranges: string[];
-  shooting_reliability: number;
+  /** @deprecated use ratings */
+  shooting_reliability?: number;
   teleop_score: number;
   intake_methods: string[];
   endgame_score: number;
   climb_levels: string[];
-  defense_rating: number;
-  cycle_time_rating: number;
-  reliability_rating: number;
+  /** @deprecated use ratings */
+  defense_rating?: number;
+  /** @deprecated use ratings */
+  cycle_time_rating?: number;
+  /** @deprecated use ratings */
+  reliability_rating?: number;
+  ratings: Record<string, number>;
   ability_answers: Record<string, boolean | null>;
+  custom_data?: Record<string, string | number | boolean | string[]>;
   notes: string;
 }
 

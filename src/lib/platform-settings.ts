@@ -17,12 +17,41 @@ export interface FormOptionItem {
   label: string;
 }
 
+/* ── Custom Sections ─────────────────────────────────────────── */
+
+export type CustomFieldType = "counter" | "toggle" | "multi-select" | "rating" | "text";
+
+export interface CustomFieldDef {
+  id: string;
+  label: string;
+  type: CustomFieldType;
+  options?: { key: string; label: string }[]; // for multi-select
+  min?: number;         // for counter
+  max?: number;         // for counter
+  maxStars?: number;    // for rating (default 5)
+  placeholder?: string; // for text
+}
+
+export interface CustomSection {
+  id: string;
+  title: string;
+  description?: string;
+  color?: string; // tailwind color prefix, e.g. "amber", "rose"
+  fields: CustomFieldDef[];
+}
+
+export const DEFAULT_SECTION_IDS = ["auto", "teleop", "endgame", "ratings", "abilities", "notes"] as const;
+export type DefaultSectionId = (typeof DEFAULT_SECTION_IDS)[number];
+
 export interface ScoutingFormConfig {
   intakeOptions: FormOptionItem[];
   climbLevelOptions: FormOptionItem[];
   shootingRangeOptions: FormOptionItem[];
   autoStartPositions: string[];
   ratingFields: FormOptionItem[];
+  hiddenSections?: string[];
+  customSections?: CustomSection[];
+  sectionOrder?: string[];
 }
 
 /* ── Pit Scout Form Config ────────────────────────────────────── */
@@ -33,10 +62,16 @@ export interface PitScoutFormConfig {
   scoringRangeOptions: FormOptionItem[];
   climbOptions: string[];
   fuelOutputOptions: string[];
+  hiddenSections?: string[];
+  customSections?: CustomSection[];
+  sectionOrder?: string[];
 }
 
+export const PIT_SECTION_IDS = ["build", "scoring", "endgame", "auto_notes"] as const;
+export type PitSectionId = (typeof PIT_SECTION_IDS)[number];
+
 const DEFAULT_PIT_SCOUT_FORM_CONFIG: PitScoutFormConfig = {
-  drivetrainOptions: ["Swerve", "Tank / West Coast", "Mecanum", "Other"],
+  drivetrainOptions: ["Swerve", "Tank", "Mecanum", "Other"],
   intakeOptions: [
     { key: "ground", label: "Ground" },
     { key: "human_player", label: "Human Player Station" },
@@ -59,13 +94,35 @@ export function normalizePitScoutFormConfig(value: unknown): PitScoutFormConfig 
   if (!value || typeof value !== "object" || Array.isArray(value)) return defaults;
 
   const obj = value as Record<string, unknown>;
+  const hiddenRaw = Array.isArray(obj.hiddenSections) ? obj.hiddenSections.filter((s): s is string => typeof s === "string") : [];
+  const customSections = normalizeCustomSections(obj.customSections);
+  const sectionOrderRaw = Array.isArray(obj.sectionOrder) ? obj.sectionOrder.filter((s): s is string => typeof s === "string") : [];
   return {
-    drivetrainOptions: normalizeStringArray(obj.drivetrainOptions, defaults.drivetrainOptions),
+    drivetrainOptions: normalizePitDrivetrainOptions(obj.drivetrainOptions, defaults.drivetrainOptions),
     intakeOptions: normalizeFormOptionItems(obj.intakeOptions, defaults.intakeOptions),
     scoringRangeOptions: normalizeFormOptionItems(obj.scoringRangeOptions, defaults.scoringRangeOptions),
     climbOptions: normalizeStringArray(obj.climbOptions, defaults.climbOptions),
     fuelOutputOptions: normalizeStringArray(obj.fuelOutputOptions, defaults.fuelOutputOptions),
+    ...(hiddenRaw.length > 0 && { hiddenSections: hiddenRaw }),
+    ...(customSections.length > 0 && { customSections }),
+    ...(sectionOrderRaw.length > 0 && { sectionOrder: sectionOrderRaw }),
   };
+}
+
+function normalizePitDrivetrainOptions(value: unknown, fallback: string[]): string[] {
+  const normalized = normalizeStringArray(value, fallback).map((item) =>
+    item === "Tank / West Coast" ? "Tank" : item
+  );
+
+  const deduped: string[] = [];
+  const seen = new Set<string>();
+  for (const item of normalized) {
+    const lower = item.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    deduped.push(item);
+  }
+  return deduped.length > 0 ? deduped : fallback;
 }
 
 const DEFAULT_SCOUTING_FORM_CONFIG: ScoutingFormConfig = {
@@ -148,17 +205,72 @@ function normalizeStringArray(value: unknown, fallback: string[]): string[] {
   return items.length > 0 ? items : fallback;
 }
 
+function normalizeCustomFieldDef(value: unknown): CustomFieldDef | null {
+  if (!value || typeof value !== "object") return null;
+  const obj = value as Record<string, unknown>;
+  const id = typeof obj.id === "string" ? obj.id.trim().slice(0, 40) : "";
+  const label = typeof obj.label === "string" ? obj.label.trim().slice(0, 80) : "";
+  const type = typeof obj.type === "string" && ["counter", "toggle", "multi-select", "rating", "text"].includes(obj.type)
+    ? (obj.type as CustomFieldType)
+    : null;
+  if (!id || !label || !type) return null;
+  const field: CustomFieldDef = { id, label, type };
+  if (type === "multi-select" && Array.isArray(obj.options)) {
+    field.options = normalizeFormOptionItems(obj.options, []);
+  }
+  return field;
+}
+
+function normalizeCustomSections(value: unknown): CustomSection[] {
+  if (!Array.isArray(value)) return [];
+  const sections: CustomSection[] = [];
+  const seenIds = new Set<string>();
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const obj = item as Record<string, unknown>;
+    const id = typeof obj.id === "string" ? obj.id.trim().slice(0, 40) : "";
+    const title = typeof obj.title === "string" ? obj.title.trim().slice(0, 80) : "";
+    if (!id || !title || seenIds.has(id)) continue;
+    seenIds.add(id);
+    const description =
+      typeof obj.description === "string"
+        ? obj.description.trim().replace(/\s+/g, " ").slice(0, 180)
+        : undefined;
+    const color = typeof obj.color === "string" ? obj.color.trim().slice(0, 20) : undefined;
+    const fields: CustomFieldDef[] = [];
+    if (Array.isArray(obj.fields)) {
+      for (const f of obj.fields) {
+        const field = normalizeCustomFieldDef(f);
+        if (field) fields.push(field);
+        if (fields.length >= 20) break;
+      }
+    }
+    if (fields.length > 0) {
+      sections.push({ id, title, ...(description ? { description } : {}), ...(color && { color }), fields });
+    }
+    if (sections.length >= 10) break;
+  }
+  return sections;
+}
+
 export function normalizeScoutingFormConfig(value: unknown): ScoutingFormConfig {
   const defaults = getDefaultScoutingFormConfig();
   if (!value || typeof value !== "object" || Array.isArray(value)) return defaults;
 
   const obj = value as Record<string, unknown>;
+  const hiddenRaw = Array.isArray(obj.hiddenSections) ? obj.hiddenSections.filter((s): s is string => typeof s === "string") : [];
+  const customSections = normalizeCustomSections(obj.customSections);
+  const sectionOrderRaw = Array.isArray(obj.sectionOrder) ? obj.sectionOrder.filter((s): s is string => typeof s === "string") : [];
+
   return {
     intakeOptions: normalizeFormOptionItems(obj.intakeOptions, defaults.intakeOptions),
     climbLevelOptions: normalizeFormOptionItems(obj.climbLevelOptions, defaults.climbLevelOptions),
     shootingRangeOptions: normalizeFormOptionItems(obj.shootingRangeOptions, defaults.shootingRangeOptions),
     autoStartPositions: normalizeStringArray(obj.autoStartPositions, defaults.autoStartPositions),
     ratingFields: normalizeFormOptionItems(obj.ratingFields, defaults.ratingFields),
+    ...(hiddenRaw.length > 0 && { hiddenSections: hiddenRaw }),
+    ...(customSections.length > 0 && { customSections }),
+    ...(sectionOrderRaw.length > 0 && { sectionOrder: sectionOrderRaw }),
   };
 }
 

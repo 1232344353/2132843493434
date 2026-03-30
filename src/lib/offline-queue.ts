@@ -16,10 +16,15 @@ export interface PendingEntry {
   shooting_reliability?: number | null;
   teleop_score: number;
   endgame_score: number;
-  defense_rating: number;
+  /** @deprecated use ratings */
+  defense_rating?: number;
+  /** @deprecated use ratings */
   cycle_time_rating?: number | null;
-  reliability_rating: number;
+  /** @deprecated use ratings */
+  reliability_rating?: number;
+  ratings?: Record<string, number>;
   ability_answers?: Record<string, boolean>;
+  custom_data?: Record<string, string | number | boolean | string[] | null> | null;
   intake_methods?: string[] | null;
   climb_levels?: string[] | null;
   endgame_state?: string | null;
@@ -121,6 +126,7 @@ export interface PendingPitEntry {
   auto_description: string | null;
   auto_fuel_scored: number | null;
   notes: string | null;
+  custom_data?: Record<string, string | number | boolean | string[] | null> | null;
   created_at: string;
   _syncStatus?: "queued" | "syncing" | "failed";
   _failedAttempts?: number;

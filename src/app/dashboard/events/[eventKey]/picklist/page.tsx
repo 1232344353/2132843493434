@@ -5,7 +5,7 @@ import type { PickListContent } from "@/types/strategy";
 import { GeneratePickListButton } from "./generate-button";
 import { Navbar } from "@/components/navbar";
 import { ChatSidebarTrigger } from "@/components/chat-sidebar";
-import { getScoutingFormConfig } from "@/lib/platform-settings";
+import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 import { PickListLoadingProvider, PickListContentArea } from "./picklist-content";
 
 export default async function PickListPage({
@@ -60,7 +60,7 @@ export default async function PickListPage({
     .single();
 
   const content = pickList?.content as PickListContent | null;
-  const scoutingFormConfig = await getScoutingFormConfig(supabase);
+  const { formConfig: scoutingFormConfig } = await getEffectiveEventFormConfig(supabase, profile.org_id, eventKey);
 
   function synergyColor(synergy: string) {
     if (synergy === "high") return "bg-green-500/20 text-green-200";
