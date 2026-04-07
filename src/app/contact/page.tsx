@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/navbar";
 import { SiteFooter } from "@/components/site-footer";
+import { getServerT } from "@/lib/i18n/server";
 import { ContactForm } from "./contact-form";
 
 export const metadata: Metadata = {
@@ -8,7 +9,9 @@ export const metadata: Metadata = {
   description: "Get in touch with the PitPilot team.",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const t = await getServerT();
+
   return (
     <div className="marketing-shell text-white">
       <Navbar />
@@ -20,12 +23,11 @@ export default function ContactPage() {
 
           <div className="relative">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
-              Contact
+              {t("contact.label")}
             </p>
-            <h1 className="mt-2 text-3xl font-bold">Let&apos;s talk strategy</h1>
+            <h1 className="mt-2 text-3xl font-bold">{t("contact.heading")}</h1>
             <p className="mt-3 max-w-2xl text-sm text-gray-300">
-              Questions, feature requests, or partnership ideas? Leave a message
-              and we&apos;ll respond as soon as we can.
+              {t("contact.subheading")}
             </p>
           </div>
         </div>
@@ -34,23 +36,23 @@ export default function ContactPage() {
           <ContactForm />
 
           <div className="marketing-card rounded-2xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">What to include</h2>
+            <h2 className="text-lg font-semibold">{t("contact.whatToInclude")}</h2>
             <p className="mt-1 text-sm text-gray-300">
-              The more context you share, the faster we can help.
+              {t("contact.whatToIncludeSub")}
             </p>
             <ul className="mt-6 space-y-3 text-sm text-gray-300">
               <li className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-                Team number and competition week.
+                {t("contact.item1")}
               </li>
               <li className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-                What you were trying to do and what happened.
+                {t("contact.item2")}
               </li>
               <li className="rounded-lg border border-white/10 bg-white/5 px-4 py-3">
-                Your device/browser and the exact error message if something broke.
+                {t("contact.item3")}
               </li>
             </ul>
             <p className="mt-6 text-xs text-gray-500">
-              Typical response time is within 24 hours during build season.
+              {t("contact.responseTime")}
             </p>
           </div>
         </div>

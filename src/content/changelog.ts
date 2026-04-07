@@ -15,7 +15,7 @@ export interface ChangelogWeek {
 export const changelog: ChangelogWeek[] = [
   {
     week: "Apr 6",
-    title: "Spanish and French, plus captain delete",
+    title: "Spanish and French",
     summary: "The full app now speaks your language, and captains can clean up reports from scouts who've left.",
     changes: [
       { type: "improved", text: "Language switching now applies to every page in the app, not just the profile menu" },

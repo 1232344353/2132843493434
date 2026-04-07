@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Navbar } from "@/components/navbar";
 import { SiteFooter } from "@/components/site-footer";
 import { changelog } from "@/content/changelog";
+import { getServerT } from "@/lib/i18n/server";
 import { ChangelogEntry } from "./changelog-entry";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
   description: "New features, improvements, and fixes shipped to PitPilot.",
 };
 
-export default function ChangelogPage() {
+export default async function ChangelogPage() {
+  const t = await getServerT();
+
   return (
     <div className="marketing-shell text-white">
       <Navbar />
@@ -18,13 +21,13 @@ export default function ChangelogPage() {
         {/* Header */}
         <div className="mb-16">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
-            What&apos;s new
+            {t("changelog.whatsNew")}
           </p>
           <h1 className="font-outfit mt-3 text-4xl font-bold tracking-tight text-white">
-            Changelog
+            {t("changelog.heading")}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-gray-400">
-            Every feature, fix, and improvement we ship.
+            {t("changelog.subtitle")}
           </p>
         </div>
 

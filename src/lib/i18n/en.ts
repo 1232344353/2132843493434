@@ -233,6 +233,37 @@ const en = {
   "tour.skip": "Skip tour",
   "tour.finish": "Get started!",
   "tour.stepOf": "Step {current} of {total}",
+
+  // Changelog page
+  "changelog.whatsNew": "What's new",
+  "changelog.heading": "Changelog",
+  "changelog.subtitle": "Every feature, fix, and improvement we ship.",
+  "changelog.latest": "Latest",
+  "changelog.badgeNew": "New",
+  "changelog.badgeImproved": "Improved",
+  "changelog.badgeFixed": "Fixed",
+
+  // Contact page
+  "contact.label": "Contact",
+  "contact.heading": "Let's talk strategy",
+  "contact.subheading": "Questions, feature requests, or partnership ideas? Leave a message and we'll respond as soon as we can.",
+  "contact.whatToInclude": "What to include",
+  "contact.whatToIncludeSub": "The more context you share, the faster we can help.",
+  "contact.item1": "Team number and competition week.",
+  "contact.item2": "What you were trying to do and what happened.",
+  "contact.item3": "Your device/browser and the exact error message if something broke.",
+  "contact.responseTime": "Typical response time is within 24 hours during build season.",
+  "contact.leaveMessage": "Leave a message",
+  "contact.leaveMessageSub": "Share your question or idea and we'll respond as soon as we can.",
+  "contact.sent": "Message sent. We'll be in touch soon.",
+  "contact.emailLabel": "Email",
+  "contact.subjectLabel": "Subject",
+  "contact.messageLabel": "Message",
+  "contact.emailPlaceholder": "you@team.org",
+  "contact.subjectPlaceholder": "What can PitPilot do for my team?",
+  "contact.messagePlaceholder": "Tell us about your team and what you need.",
+  "contact.sending": "Sending...",
+  "contact.send": "Send message",
 } as const;
 
 export type TranslationKey = keyof typeof en;

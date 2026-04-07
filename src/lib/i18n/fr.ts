@@ -233,6 +233,37 @@ const fr: Record<string, string> = {
   "tour.skip": "Passer le tour",
   "tour.finish": "C'est parti !",
   "tour.stepOf": "Étape {current} de {total}",
+
+  // Changelog page
+  "changelog.whatsNew": "Nouveautés",
+  "changelog.heading": "Journal des modifications",
+  "changelog.subtitle": "Chaque fonctionnalité, correction et amélioration que nous livrons.",
+  "changelog.latest": "Dernier",
+  "changelog.badgeNew": "Nouveau",
+  "changelog.badgeImproved": "Amélioré",
+  "changelog.badgeFixed": "Corrigé",
+
+  // Contact page
+  "contact.label": "Contact",
+  "contact.heading": "Parlons stratégie",
+  "contact.subheading": "Des questions, des demandes de fonctionnalités ou des idées de partenariat? Laissez un message et nous répondrons dès que possible.",
+  "contact.whatToInclude": "Ce qu'il faut inclure",
+  "contact.whatToIncludeSub": "Plus vous partagez de contexte, plus vite nous pouvons vous aider.",
+  "contact.item1": "Numéro d'équipe et semaine de compétition.",
+  "contact.item2": "Ce que vous essayiez de faire et ce qui s'est passé.",
+  "contact.item3": "Votre appareil/navigateur et le message d'erreur exact si quelque chose a échoué.",
+  "contact.responseTime": "Le temps de réponse typique est de 24 heures pendant la saison de construction.",
+  "contact.leaveMessage": "Laisser un message",
+  "contact.leaveMessageSub": "Partagez votre question ou votre idée et nous répondrons dès que possible.",
+  "contact.sent": "Message envoyé. Nous vous répondrons bientôt.",
+  "contact.emailLabel": "E-mail",
+  "contact.subjectLabel": "Sujet",
+  "contact.messageLabel": "Message",
+  "contact.emailPlaceholder": "vous@equipe.org",
+  "contact.subjectPlaceholder": "Que peut faire PitPilot pour mon équipe?",
+  "contact.messagePlaceholder": "Parlez-nous de votre équipe et de ce dont vous avez besoin.",
+  "contact.sending": "Envoi en cours...",
+  "contact.send": "Envoyer le message",
 };
 
 export default fr;

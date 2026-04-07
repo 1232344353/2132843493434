@@ -2,17 +2,12 @@
 
 import { useState } from "react";
 import type { ChangeType } from "@/content/changelog";
+import { useTranslation } from "@/components/i18n-provider";
 
 const BADGE_STYLES: Record<ChangeType, string> = {
   new: "bg-teal-500/15 text-teal-300 ring-1 ring-teal-500/25",
   improved: "bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/25",
   fixed: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/25",
-};
-
-const BADGE_LABELS: Record<ChangeType, string> = {
-  new: "New",
-  improved: "Improved",
-  fixed: "Fixed",
 };
 
 interface Props {
@@ -31,6 +26,13 @@ export function ChangelogEntry({
   defaultOpen = false,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
+  const { t } = useTranslation();
+
+  const BADGE_LABELS: Record<ChangeType, string> = {
+    new: t("changelog.badgeNew"),
+    improved: t("changelog.badgeImproved"),
+    fixed: t("changelog.badgeFixed"),
+  };
 
   return (
     <div>
@@ -43,7 +45,7 @@ export function ChangelogEntry({
           <div className="min-w-0">
             {isLatest && (
               <span className="mb-2 inline-flex items-center rounded-full bg-teal-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-teal-300 ring-1 ring-teal-500/25">
-                Latest
+                {t("changelog.latest")}
               </span>
             )}
             <h2 className="text-base font-semibold leading-snug text-white">
