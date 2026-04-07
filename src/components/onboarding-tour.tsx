@@ -31,11 +31,6 @@ const DEFAULT_TOUR_STEPS: TourStep[] = [
     titleKey: "tour.scoutingReports",
     descKey: "tour.scoutingReportsDesc",
   },
-  {
-    selector: "[data-tour='team-pulse']",
-    titleKey: "tour.teamPulse",
-    descKey: "tour.teamPulseDesc",
-  },
 ];
 
 const DEFAULT_STORAGE_KEY = "pitpilot_tour_seen";

@@ -9,6 +9,8 @@ import { removeMemberFromOrganization, updateMemberRole } from "@/lib/captain-ac
 import { DeleteTeamButton } from "@/components/delete-team-button";
 import { hasSupporterAccess } from "@/lib/rate-limit";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { UserAvatar } from "@/components/user-avatar";
+import { useToast } from "@/components/toast";
 
 interface TeamSettingsFormProps {
   org: {
@@ -62,7 +64,7 @@ export function TeamSettingsForm({
   const searchParams = useSearchParams();
   const billingState = searchParams.get("billing");
   const [copied, setCopied] = useState(false);
-  const [memberStatus, setMemberStatus] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Team settings state
   const [teamName, setTeamName] = useState(org.name);
@@ -158,34 +160,31 @@ export function TeamSettingsForm({
 
   async function handleMemberRoleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setMemberStatus(null);
-
     const formData = new FormData(e.currentTarget);
     const result = await updateMemberRole(formData);
 
     if (result?.error) {
-      setMemberStatus(result.error);
+      toast(result.error, "error");
       return;
     }
 
-    setMemberStatus("Member role updated.");
+    toast("Member role updated.", "success");
     router.refresh();
   }
 
   async function handleKickMember(memberId: string, memberName: string) {
     setKickLoadingMemberId(memberId);
-    setMemberStatus(null);
 
     try {
       const formData = new FormData();
       formData.set("memberId", memberId);
       const result = await removeMemberFromOrganization(formData);
       if (result?.error) {
-        setMemberStatus(result.error);
+        toast(result.error, "error");
         return;
       }
 
-      setMemberStatus(`${memberName} was removed from the team.`);
+      toast(`${memberName} was removed from the team.`, "success");
       router.refresh();
     } finally {
       setKickLoadingMemberId(null);
@@ -497,70 +496,117 @@ export function TeamSettingsForm({
 
       {isCaptain && (
         <div className="rounded-2xl dashboard-panel dashboard-card p-6">
-          <h3 className="text-lg font-semibold text-white">Members & Permissions</h3>
-          <p className="mt-1 text-sm text-gray-300">
-            Promote teammates to captain or scout roles, or remove them from the team.
-          </p>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Members & Permissions</h3>
+              <p className="mt-0.5 text-sm text-gray-400">
+                {members.length} member{members.length !== 1 ? "s" : ""} on this team
+              </p>
+            </div>
+          </div>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-5 divide-y divide-white/[0.06] rounded-xl border border-white/10 overflow-hidden">
             {members.length === 0 ? (
-              <p className="text-sm text-gray-400">No members found.</p>
+              <p className="px-4 py-4 text-sm text-gray-400">No members found.</p>
             ) : (
-              members.map((member) => {
-                const isCurrentUser = member.id === currentUserId;
-                const isRemoving = kickLoadingMemberId === member.id;
+              (() => {
+                const sorted = [...members].sort((a, b) => {
+                  if (a.id === currentUserId) return -1;
+                  if (b.id === currentUserId) return 1;
+                  if (a.role === b.role) return 0;
+                  return a.role === "captain" ? -1 : 1;
+                });
+                return sorted.map((member, idx) => {
+                  const isCurrentUser = member.id === currentUserId;
+                  const isRemoving = kickLoadingMemberId === member.id;
+                  const isCaptainRole = member.role === "captain";
+                  const nextMember = sorted[idx + 1];
+                  const showDivider = isCurrentUser && nextMember;
 
-                return (
-                  <form
-                    key={member.id}
-                    onSubmit={handleMemberRoleSubmit}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-3 py-2"
-                  >
-                    <input type="hidden" name="memberId" value={member.id} />
-                    <div>
-                      <p className="text-sm font-medium text-white">{member.display_name}</p>
-                      <p className="text-xs text-gray-400">{formatJoinedDate(member.created_at)}</p>
+                  return (
+                    <div key={member.id}>
+                      <form
+                        onSubmit={handleMemberRoleSubmit}
+                        className="flex flex-wrap items-center justify-between gap-3 bg-white/[0.01] px-4 py-3 transition hover:bg-white/[0.03]"
+                      >
+                        <input type="hidden" name="memberId" value={member.id} />
+
+                        <div className="flex items-center gap-3 min-w-0">
+                          <UserAvatar name={member.display_name ?? member.id} size={36} />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium text-white truncate">{member.display_name}</p>
+                              {isCurrentUser && (
+                                <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                                  You
+                                </span>
+                              )}
+                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                                isCaptainRole
+                                  ? "bg-teal-500/15 text-teal-300"
+                                  : "bg-white/[0.06] text-gray-400"
+                              }`}>
+                                {isCaptainRole ? "Captain" : "Scout"}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-500">{formatJoinedDate(member.created_at)}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <select
+                            name="role"
+                            defaultValue={member.role}
+                            className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-white dashboard-input focus:outline-none focus:ring-1 focus:ring-teal-500/40"
+                          >
+                            <option value="scout">Scout</option>
+                            <option value="captain">Captain</option>
+                          </select>
+                          <button
+                            type="submit"
+                            className="rounded-lg bg-teal-500/15 border border-teal-500/25 px-3 py-1.5 text-xs font-semibold text-teal-300 transition hover:bg-teal-500/25 hover:border-teal-400/40"
+                          >
+                            Save
+                          </button>
+                          {isCurrentUser ? (
+                            <div className="w-[27px]" />
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={isRemoving || kickLoadingMemberId !== null}
+                              onClick={() =>
+                                setKickCandidate({
+                                  id: member.id,
+                                  name: member.display_name,
+                                })
+                              }
+                              className="rounded-lg p-1.5 text-gray-500 transition hover:bg-red-500/10 hover:text-red-400 disabled:opacity-40"
+                              title="Remove member"
+                            >
+                              {isRemoving ? (
+                                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                </svg>
+                              ) : (
+                                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+                                </svg>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </form>
+                      {showDivider && (
+                        <div className="border-t border-white/10 mx-4" />
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <select
-                        name="role"
-                        defaultValue={member.role}
-                        className="rounded-md border border-white/10 bg-white/5 px-2 py-1 text-sm text-white dashboard-input"
-                      >
-                        <option value="scout">Scout</option>
-                        <option value="captain">Captain</option>
-                      </select>
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-teal-500 px-3 py-1.5 text-sm font-semibold text-white hover:bg-teal-400"
-                      >
-                        Update
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isCurrentUser || isRemoving || kickLoadingMemberId !== null}
-                        onClick={() =>
-                          setKickCandidate({
-                            id: member.id,
-                            name: member.display_name,
-                          })
-                        }
-                        className="rounded-lg border border-red-500/30 px-3 py-1.5 text-sm font-semibold text-red-300 transition hover:border-red-400/60 hover:bg-red-500/10 disabled:opacity-50"
-                      >
-                        {isCurrentUser ? "You" : isRemoving ? "Removing..." : "Remove"}
-                      </button>
-                    </div>
-                  </form>
-                );
-              })
+                  );
+                });
+              })()
             )}
           </div>
 
-          {memberStatus && (
-            <p className="mt-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-200">
-              {memberStatus}
-            </p>
-          )}
         </div>
       )}
 

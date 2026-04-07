@@ -42,7 +42,7 @@ export function DeleteTeamButton({ label = "Delete team" }: DeleteTeamButtonProp
       <ConfirmDialog
         open={confirmOpen}
         title="Delete team?"
-        description="This permanently deletes your team workspace, scouting reports, assignments, and Team Pulse history for everyone on the team."
+        description="This permanently deletes your team workspace, scouting reports, and assignments for everyone on the team."
         confirmLabel={isPending ? "Deleting..." : "Delete team"}
         cancelLabel="Cancel"
         tone="danger"

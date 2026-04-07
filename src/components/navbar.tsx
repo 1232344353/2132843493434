@@ -41,12 +41,27 @@ export async function Navbar() {
           {announcement.message}
         </div>
       )}
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+      <div className="mx-auto flex h-16 max-w-6xl items-center px-4">
         <Link href="/" className="font-outfit text-lg font-bold tracking-tight text-white">
           Pit<span className="text-teal-400">Pilot</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="hidden flex-1 items-center justify-center gap-1 sm:flex">
+          <Link
+            href="/changelog"
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:bg-white/5 hover:text-white"
+          >
+            Changelog
+          </Link>
+          <Link
+            href="/contact"
+            className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:bg-white/5 hover:text-white"
+          >
+            Contact
+          </Link>
+        </div>
+
+        <div className="ml-auto flex items-center gap-2">
           {user ? (
             <UserMenu
               name={profile?.display_name ?? user.email ?? "Account"}

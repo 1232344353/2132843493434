@@ -6,8 +6,9 @@ import { HeroAnimations } from "./hero-animations";
 import { Navbar } from "@/components/navbar";
 import { LiveStats } from "./live-stats";
 import { DashboardPreview } from "./dashboard-preview";
+import { AIBriefingPreview } from "./ai-briefing-preview";
 import Image from "next/image";
-import { Testimonials } from "./testimonials";
+// import { Testimonials } from "./testimonials";
 import { createClient } from "@/lib/supabase/server";
 import { MotionSection } from "@/components/motion-section";
 import { SiteFooter } from "@/components/site-footer";
@@ -192,8 +193,9 @@ export default async function Home() {
       </MotionSection>
 
       <DashboardPreview />
+      <AIBriefingPreview />
 
-      <Testimonials />
+      {/* <Testimonials /> */}
 
       <MotionSection id="pricing" className="relative py-24">
         <div className="pointer-events-none absolute left-0 top-0 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -219,7 +221,7 @@ export default async function Home() {
                 <PricingItem included>Unlimited scouting entries</PricingItem>
                 <PricingItem included>TBA + Statbotics sync</PricingItem>
                 <PricingItem included>Pre-match briefs + pick optimizer</PricingItem>
-                <PricingItem included>Team Pulse + assignment workflows</PricingItem>
+                <PricingItem included>Assignment workflows</PricingItem>
                 <PricingItem included>Unlimited prompts with usage limits</PricingItem>
               </ul>
               <Link

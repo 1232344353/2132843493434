@@ -119,15 +119,9 @@ export default async function DashboardPage() {
 
   const eventsCount = orgEvents?.length ?? 0;
 
-  const sinceDate = new Date();
-  sinceDate.setHours(sinceDate.getHours() - 24);
-  const since = sinceDate.toISOString();
-
   const [
     { count: memberCount },
     { count: scoutingCount },
-    { count: pulseCount },
-    { data: lastPulse },
     { data: reportPreview },
   ] = await Promise.all([
     supabase
@@ -138,18 +132,6 @@ export default async function DashboardPage() {
       .from("scouting_entries")
       .select("*", { count: "exact", head: true })
       .eq("org_id", profile.org_id),
-    supabase
-      .from("team_messages")
-      .select("*", { count: "exact", head: true })
-      .eq("org_id", profile.org_id)
-      .gte("created_at", since),
-    supabase
-      .from("team_messages")
-      .select("created_at")
-      .eq("org_id", profile.org_id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
     supabase
       .from("scouting_entries")
       .select(
@@ -479,54 +461,6 @@ export default async function DashboardPage() {
               isCaptain={profile.role === "captain"}
             />
           )}
-        </AnimateIn>
-
-        {/* ─── Team Pulse ─── */}
-        <AnimateIn delay={0.5} className="mt-10 space-y-4">
-          <div data-tour="team-pulse" className="flex items-center gap-3">
-            <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10 text-teal-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              {(pulseCount ?? 0) > 0 && (
-                <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-green-400" />
-                </span>
-              )}
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white">{t("dashboard.teamPulse")}</h3>
-              <p className="text-sm text-gray-400">
-                {t("dashboard.teamPulseDesc")}
-              </p>
-            </div>
-          </div>
-          <div className="rounded-2xl dashboard-panel dashboard-card p-6 flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm text-gray-300">
-                {t("dashboard.newUpdates", { count: (pulseCount ?? 0).toLocaleString() })}
-              </p>
-              {lastPulse?.created_at ? (
-                <p className="mt-1 text-xs text-gray-400">
-                  Last update{" "}
-                  {new Date(lastPulse.created_at).toLocaleTimeString("en-US", {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </p>
-              ) : (
-                <p className="mt-1 text-xs text-gray-400">
-                  {t("dashboard.noUpdates")}
-                </p>
-              )}
-            </div>
-            <Link
-              href="/dashboard/pulse"
-              className="inline-flex items-center gap-2 rounded-lg bg-green-500/10 border border-green-500/20 px-4 py-2 text-sm font-medium text-green-300 transition hover:bg-green-500/15 hover:border-green-500/30"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              {t("dashboard.openChannel")}
-            </Link>
-          </div>
         </AnimateIn>
 
       </main>

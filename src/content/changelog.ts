@@ -19,9 +19,9 @@ export const changelog: ChangelogWeek[] = [
     summary: "The full app now speaks your language, and captains can clean up reports from scouts who've left.",
     changes: [
       { type: "improved", text: "Language switching now applies to every page in the app, not just the profile menu" },
+      { type: "improved", text: "Removed Team Pulse to simplify the team communication workflow" },
       { type: "new", text: "Spanish and French translations cover all dashboard, event, match, analytics, and scouting screens" },
       { type: "fixed", text: "Captains can now delete scouting reports submitted by teammates who left the team" },
-      { type: "improved", text: "Offline page matches the app's dark theme with the correct branding and colors" },
     ],
   },
   {

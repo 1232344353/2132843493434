@@ -258,7 +258,7 @@ export default function OnboardingPage() {
                       placeholder="e.g. Jamie Chen"
                     />
                     <p className="mt-2 text-xs text-slate-400">
-                      This will be shown across team scouting reports and Team Pulse.
+                      This will be shown across team scouting reports.
                     </p>
                   </div>
                 ) : step === 2 ? (
