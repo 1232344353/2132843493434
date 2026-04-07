@@ -28,7 +28,7 @@ export default async function ReportsPage() {
   const { data: reports } = await supabase
     .from("scouting_entries")
     .select(
-      "id, created_at, team_number, match_id, auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes, profiles(display_name), matches (comp_level, match_number, set_number, event_id, events (name, year, tba_key))"
+      "id, created_at, team_number, match_id, scouted_by, auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes, profiles(display_name), matches (comp_level, match_number, set_number, event_id, events (name, year, tba_key))"
     )
     .eq("org_id", profile.org_id)
     .order("created_at", { ascending: false });
@@ -60,6 +60,7 @@ export default async function ReportsPage() {
           initialReports={normalizedReports as never}
           orgId={profile.org_id}
           isCaptain={isCaptain}
+          userId={user.id}
         />
       </main>
     </div>

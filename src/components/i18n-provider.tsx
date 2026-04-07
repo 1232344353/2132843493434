@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   type Locale,
   type TranslationKey,
@@ -31,18 +32,27 @@ const I18nContext = createContext<I18nContextValue>({
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
-    setLocaleState(getSavedLocale());
+    const saved = getSavedLocale();
+    setLocaleState(saved);
+    // Sync localStorage value to cookie so server components stay in sync
+    saveLocale(saved);
+    // Correct the html lang attribute in case it differs from the saved locale
+    document.documentElement.lang = saved;
     setMounted(true);
   }, []);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     saveLocale(next);
-    // Update html lang attribute
     document.documentElement.lang = next;
-  }, []);
+    // Re-fetch server components so they render in the new locale.
+    // The cookie is already set by saveLocale above, so the server
+    // will read the correct locale on the next render pass.
+    router.refresh();
+  }, [router]);
 
   const t = useCallback(
     (key: TranslationKey | string, vars?: Record<string, string | number>) =>

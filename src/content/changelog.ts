@@ -14,6 +14,17 @@ export interface ChangelogWeek {
 
 export const changelog: ChangelogWeek[] = [
   {
+    week: "Apr 6",
+    title: "Spanish and French, plus captain delete",
+    summary: "The full app now speaks your language, and captains can clean up reports from scouts who've left.",
+    changes: [
+      { type: "improved", text: "Language switching now applies to every page in the app, not just the profile menu" },
+      { type: "new", text: "Spanish and French translations cover all dashboard, event, match, analytics, and scouting screens" },
+      { type: "fixed", text: "Captains can now delete scouting reports submitted by teammates who left the team" },
+      { type: "improved", text: "Offline page matches the app's dark theme with the correct branding and colors" },
+    ],
+  },
+  {
     week: "Mar 29",
     title: "Customize your scouting form",
     summary: "Captains can now build a form that fits your game plan, not a generic template.",

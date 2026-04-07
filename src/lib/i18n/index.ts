@@ -56,4 +56,7 @@ export function getSavedLocale(): Locale {
 export function saveLocale(locale: Locale): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEY, locale);
+  // Also persist in a cookie so server components can read the locale
+  const secure = location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `pitpilot_locale=${locale}; path=/; max-age=31536000; SameSite=Lax${secure}`;
 }

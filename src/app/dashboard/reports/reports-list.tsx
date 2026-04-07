@@ -13,6 +13,7 @@ import type { Database } from "@/types/supabase";
 type ScoutingEntry = Database["public"]["Tables"]["scouting_entries"]["Row"];
 
 type ReportRow = ScoutingEntry & {
+  scouted_by: string | null;
   profiles: { display_name: string } | null;
   matches: {
     comp_level: string;
@@ -66,10 +67,12 @@ export function ReportsList({
   initialReports,
   orgId,
   isCaptain,
+  userId,
 }: {
   initialReports: ReportRow[];
   orgId: string;
   isCaptain: boolean;
+  userId: string;
 }) {
   // The realtime hook tracks raw scouting entries (no joins).
   // For new entries arriving via realtime, we won't have the joined
@@ -207,43 +210,49 @@ export function ReportsList({
                       </span>
                     )}
                   </div>
-                  <form
-                    action={
-                      deleteScoutingReport as unknown as (
-                        formData: FormData
-                      ) => void
-                    }
-                  >
-                    <input type="hidden" name="reportId" value={report.id} />
-                    <ConfirmButton
-                      type="submit"
-                      title="Delete this report?"
-                      description="This removes the scouting report from your team history. This cannot be undone."
-                      confirmLabel="Delete report"
-                      cancelLabel="Cancel"
-                      tone="danger"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-sm text-gray-300 transition hover:border-red-400/60 hover:text-red-200 hover:bg-red-500/10"
-                      aria-label="Delete report"
+                  {(report.scouted_by === userId || isCaptain) && (
+                    <form
+                      action={
+                        deleteScoutingReport as unknown as (
+                          formData: FormData
+                        ) => void
+                      }
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                      <input type="hidden" name="reportId" value={report.id} />
+                      <ConfirmButton
+                        type="submit"
+                        title="Delete this report?"
+                        description={
+                          report.scouted_by === userId
+                            ? "This removes your scouting report from your team history. This cannot be undone."
+                            : "This removes a teammate's scouting report from your team history. This cannot be undone."
+                        }
+                        confirmLabel="Delete report"
+                        cancelLabel="Cancel"
+                        tone="danger"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-sm text-gray-300 transition hover:border-red-400/60 hover:text-red-200 hover:bg-red-500/10"
+                        aria-label="Delete report"
                       >
-                        <path d="M3 6h18" />
-                        <path d="M8 6V4h8v2" />
-                        <path d="M19 6l-1 14H6L5 6" />
-                        <path d="M10 11v6" />
-                        <path d="M14 11v6" />
-                      </svg>
-                    </ConfirmButton>
-                  </form>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4h8v2" />
+                          <path d="M19 6l-1 14H6L5 6" />
+                          <path d="M10 11v6" />
+                          <path d="M14 11v6" />
+                        </svg>
+                      </ConfirmButton>
+                    </form>
+                  )}
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">

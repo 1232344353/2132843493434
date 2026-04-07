@@ -1,19 +1,23 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Offline | PitPilot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@700;800&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
-      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background:
-        radial-gradient(1200px 700px at 20% 0%, rgba(37, 99, 235, 0.14), transparent 55%),
-        radial-gradient(900px 600px at 80% 100%, rgba(8, 145, 178, 0.14), transparent 55%),
-        #030712;
-      color: #e5e7eb;
-      min-height: 100vh;
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background-color: #06080f;
+      background-image:
+        radial-gradient(900px 600px at 15% 0%,  rgba(67, 217, 162, 0.10), transparent 60%),
+        radial-gradient(700px 500px at 85% 90%, rgba(34, 211, 238, 0.09), transparent 60%);
+      color: #e2e8f0;
+      min-height: 100svh;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -21,176 +25,308 @@
       padding: 1.5rem;
       text-align: center;
     }
-    .shell {
-      width: min(100%, 480px);
+
+    /* ── Logo ── */
+    .logo {
+      font-family: Outfit, sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #fff;
+      margin-bottom: 2.25rem;
     }
+    .logo span { color: #43d9a2; }
+
+    /* ── Shell ── */
+    .shell {
+      width: min(100%, 460px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Icon badge ── */
+    .icon-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: rgba(67, 217, 162, 0.10);
+      border: 1px solid rgba(67, 217, 162, 0.22);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      color: #43d9a2;
+    }
+
+    /* ── Hero copy ── */
     .hero-copy {
-      margin: 0 auto 2rem;
-      max-width: 36ch;
-      text-align: center;
+      margin-bottom: 1.75rem;
+      max-width: 34ch;
     }
     h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 0.65rem;
-      letter-spacing: -0.02em;
+      font-family: Outfit, sans-serif;
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: #fff;
+      line-height: 1.15;
+      margin-bottom: 0.6rem;
       text-wrap: balance;
     }
     .subtitle {
       color: #94a3b8;
-      font-size: 1rem;
-      margin: 0 auto;
-      line-height: 1.5;
+      font-size: 0.95rem;
+      line-height: 1.6;
       text-wrap: balance;
     }
+
+    /* ── Info card ── */
     .info-card {
-      background: rgba(15, 23, 42, 0.75);
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(148, 163, 184, 0.22);
       border-radius: 16px;
-      padding: 1.35rem 1.4rem;
-      max-width: 480px;
+      padding: 1.25rem 1.4rem;
       width: 100%;
       text-align: left;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 18px 40px rgba(2, 6, 23, 0.35);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 30px 60px rgba(2, 6, 23, 0.35);
     }
-    .info-card h2 {
-      font-size: 0.8rem;
+    .info-card-label {
+      font-size: 0.72rem;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      color: #60a5fa;
-      margin-bottom: 0.75rem;
+      color: #43d9a2;
+      margin-bottom: 0.85rem;
     }
     .info-card ul {
       list-style: none;
       padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
     }
     .info-card li {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       color: #cbd5e1;
-      padding: 0.4rem 0 0.4rem 1.35rem;
-      position: relative;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.65rem;
+      line-height: 1.45;
     }
-    .info-card li::before {
-      content: "✓";
-      position: absolute;
-      left: 0;
+    .check-icon {
+      flex-shrink: 0;
+      margin-top: 1px;
       color: #34d399;
-      font-weight: bold;
     }
+
+    /* ── Divider ── */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: rgba(148, 163, 184, 0.14);
+      margin: 1.5rem 0;
+    }
+
+    /* ── Actions ── */
     .actions {
-      margin-top: 1.9rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.75rem;
+      gap: 0.65rem;
       flex-wrap: wrap;
+      width: 100%;
     }
     .retry-btn {
-      background: #2563eb;
-      color: white;
+      background: #43d9a2;
+      color: #030712;
       border: none;
-      border-radius: 10px;
-      padding: 0.72rem 1.5rem;
-      font-size: 0.95rem;
+      border-radius: 8px;
+      padding: 0.65rem 1.4rem;
+      font-size: 0.9rem;
       font-weight: 600;
+      font-family: inherit;
       cursor: pointer;
-      transition: background 0.2s ease, transform 0.2s ease;
-      min-width: 130px;
+      transition: background 0.18s ease, transform 0.18s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
     }
-    .retry-btn:hover { background: #1d4ed8; }
-    .retry-btn:active { background: #1e40af; transform: translateY(1px); }
+    .retry-btn:hover  { background: #6ee7c0; }
+    .retry-btn:active { background: #2dd4bf; transform: translateY(1px); }
+
     .home-btn {
       background: rgba(15, 23, 42, 0.7);
-      color: #e5e7eb;
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      border-radius: 10px;
-      padding: 0.72rem 1.2rem;
-      font-size: 0.95rem;
+      color: #e2e8f0;
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 8px;
+      padding: 0.65rem 1.2rem;
+      font-size: 0.9rem;
       font-weight: 600;
+      font-family: inherit;
       text-decoration: none;
-      transition: background 0.2s ease, border-color 0.2s ease;
+      cursor: pointer;
+      transition: background 0.18s ease, border-color 0.18s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
     }
     .home-btn:hover {
       background: rgba(30, 41, 59, 0.85);
-      border-color: rgba(148, 163, 184, 0.45);
+      border-color: rgba(148, 163, 184, 0.40);
     }
+
+    /* ── Status ── */
     .status {
-      margin-top: 1rem;
-      font-size: 0.84rem;
-      color: #94a3b8;
+      margin-top: 1.1rem;
+      font-size: 0.82rem;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
     }
-    .status .dot {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
+    .dot {
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
       background: #f59e0b;
-      margin-right: 4px;
-      vertical-align: middle;
+      flex-shrink: 0;
     }
-    .status.online .dot {
-      background: #10b981;
+    .status.online .dot  { background: #10b981; animation: pulse-dot 1.4s ease infinite; }
+    .status.online       { color: #86efac; }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
     }
-    .status.online {
-      color: #86efac;
-    }
+
+    /* ── Legal ── */
     .legal {
-      margin-top: 0.8rem;
-      font-size: 0.74rem;
-      color: #64748b;
+      margin-top: 0.75rem;
+      font-size: 0.72rem;
+      color: #475569;
     }
     .legal a {
-      color: #93c5fd;
+      color: #64748b;
       text-decoration: none;
+      transition: color 0.15s;
     }
-    .legal a:hover {
-      color: #bfdbfe;
-      text-decoration: underline;
-    }
+    .legal a:hover { color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="shell">
+
+    <div class="logo">Pit<span>Pilot</span></div>
+
+    <!-- Wi-Fi off icon -->
+    <div class="icon-wrap">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.75"
+           stroke-linecap="round" stroke-linejoin="round">
+        <line x1="1" y1="1" x2="23" y2="23"/>
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/>
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/>
+        <path d="M10.71 5.05A16 16 0 0 1 22.56 9"/>
+        <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/>
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+        <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+
     <div class="hero-copy">
       <h1>You're Offline</h1>
       <p class="subtitle">
-        No internet connection detected. You can keep scouting on this device and
-        your entries will sync automatically once you're back online.
+        No internet detected. Keep scouting on this device and your entries
+        will sync automatically when you reconnect.
       </p>
     </div>
 
     <div class="info-card">
-      <h2>What works offline</h2>
+      <p class="info-card-label">What works offline</p>
       <ul>
-        <li>Scouting forms save locally on this device</li>
-        <li>Queued entries auto-sync when you reconnect</li>
-        <li>Previously opened pages can still load from cache</li>
-        <li>Team dashboard and sync tools return when online</li>
+        <li>
+          <svg class="check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Scouting forms save directly to this device
+        </li>
+        <li>
+          <svg class="check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Queued entries auto-sync when you reconnect
+        </li>
+        <li>
+          <svg class="check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Previously visited pages still load from cache
+        </li>
+        <li>
+          <svg class="check-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5"
+               stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Dashboard and sync tools return when back online
+        </li>
       </ul>
     </div>
 
+    <div class="divider"></div>
+
     <div class="actions">
       <button class="retry-btn" onclick="window.location.reload()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
         Try Again
       </button>
-      <a class="home-btn" id="matches-btn" href="/dashboard">Scout Matches</a>
+      <a class="home-btn" id="matches-btn" href="/dashboard">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        Dashboard
+      </a>
     </div>
 
     <p id="status" class="status">
-      <span class="dot"></span> Waiting for connection
+      <span class="dot"></span>
+      Waiting for connection
     </p>
+
     <p class="legal">
       <a href="/privacy">Privacy Policy</a>
     </p>
+
   </div>
 
   <script>
+    // Restore last known matches URL
     try {
       var matchesUrl = localStorage.getItem("pitpilot:last-matches-url");
       if (matchesUrl) {
-        document.getElementById("matches-btn").href = matchesUrl;
+        var btn = document.getElementById("matches-btn");
+        btn.href = matchesUrl;
+        btn.querySelector("svg").outerHTML =
+          '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>';
+        btn.childNodes[btn.childNodes.length - 1].textContent = " Scout Matches";
       }
     } catch (e) {}
 
@@ -198,26 +334,20 @@
 
     function setStatus(isOnline) {
       if (!statusEl) return;
+      var dot = '<span class="dot"></span>';
       if (isOnline) {
-        statusEl.classList.add("online");
-        statusEl.innerHTML = '<span class="dot"></span> Back online. Reloading...';
+        statusEl.className = "status online";
+        statusEl.innerHTML = dot + " Back online. Reloading\u2026";
       } else {
-        statusEl.classList.remove("online");
-        statusEl.innerHTML = '<span class="dot"></span> Waiting for connection';
+        statusEl.className = "status";
+        statusEl.innerHTML = dot + " Waiting for connection";
       }
     }
 
     setStatus(navigator.onLine);
 
-    // Auto-reload when connection returns
-    window.addEventListener("online", function() {
-      setStatus(true);
-      window.location.reload();
-    });
-
-    window.addEventListener("offline", function() {
-      setStatus(false);
-    });
+    window.addEventListener("online",  function() { setStatus(true);  window.location.reload(); });
+    window.addEventListener("offline", function() { setStatus(false); });
   </script>
 </body>
 </html>

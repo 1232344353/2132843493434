@@ -6,6 +6,7 @@ import { TeamStatsTable } from "./team-stats-table";
 import { Navbar } from "@/components/navbar";
 import { SyncStatsButton } from "./sync-stats-button";
 import { EventTour } from "./event-tour";
+import { getServerT } from "@/lib/i18n/server";
 
 export async function generateMetadata({
   params,
@@ -44,6 +45,7 @@ export default async function EventPage({
 }) {
   const { eventKey } = await params;
   const supabase = await createClient();
+  const t = await getServerT();
 
   const {
     data: { user },
@@ -69,15 +71,15 @@ export default async function EventPage({
     return (
       <div className="flex min-h-screen items-center justify-center dashboard-page">
         <div className="text-center space-y-4">
-          <h1 className="text-2xl font-bold">Event not found</h1>
+          <h1 className="text-2xl font-bold">{t("event.notFound")}</h1>
           <p className="text-gray-400">
-            Sync event <span className="font-mono">{eventKey}</span> first from the dashboard.
+            {t("event.notFoundSub", { key: eventKey })}
           </p>
           <Link
             href="/dashboard"
             className="back-button"
           >
-            Back to dashboard
+            {t("event.backToDashboard")}
           </Link>
         </div>
       </div>
@@ -202,13 +204,13 @@ export default async function EventPage({
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div data-tour="event-header">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
-              Event overview
+              {t("event.overview")}
             </p>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
               <h1 className="text-2xl font-bold leading-tight">{eventTitle}</h1>
               {orgTeamNumber !== null && !isOrgInEvent && (
                 <span className="inline-flex rounded-full bg-teal-500/20 px-3 py-1 text-xs font-medium text-teal-600 dark:text-teal-300">
-                  Not Attending
+                  {t("event.notAttending")}
                 </span>
               )}
             </div>
@@ -218,8 +220,8 @@ export default async function EventPage({
             </p>
             <p className="mt-1 text-xs text-gray-400">
               {lastSyncLabel
-                ? `Last stats sync ${lastSyncLabel}`
-                : "Stats not synced yet"}
+                ? t("event.lastSync", { time: lastSyncLabel })
+                : t("event.notSynced")}
             </p>
             {profile?.role === "captain" && (
               <div className="mt-3">
@@ -233,7 +235,7 @@ export default async function EventPage({
               className="dashboard-action dashboard-action-primary dashboard-action-holo"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-              Scout Matches
+              {t("event.scoutMatchesBtn")}
             </Link>
             {profile?.role === "captain" && (
               <Link
@@ -241,7 +243,7 @@ export default async function EventPage({
                 className="dashboard-action dashboard-action-ghost"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                Assignments
+                {t("event.assignments")}
               </Link>
             )}
             <Link
@@ -249,7 +251,7 @@ export default async function EventPage({
               className="dashboard-action dashboard-action-ghost"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              Analytics
+              {t("event.analytics")}
             </Link>
             {isOrgInEvent && (
               <Link
@@ -257,7 +259,7 @@ export default async function EventPage({
                 className="dashboard-action dashboard-action-ghost"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                Draft Room
+                {t("event.draftRoom")}
               </Link>
             )}
             {profile?.role === "captain" && (
@@ -267,14 +269,14 @@ export default async function EventPage({
                 title="Customize scouting form"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                Form Setup
+                {t("event.formSetup")}
               </Link>
             )}
             <Link
               href="/dashboard"
               className="back-button"
             >
-              Back
+              {t("common.back")}
             </Link>
           </div>
         </div>
@@ -282,9 +284,9 @@ export default async function EventPage({
         <div data-tour="event-team-stats">
           {tableData.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 dashboard-panel p-10 text-center">
-              <p className="text-sm font-medium text-gray-300">No team stats yet</p>
+              <p className="text-sm font-medium text-gray-300">{t("event.noStats")}</p>
               <p className="mt-1 text-xs text-gray-500">
-                Stats populate once matches begin. Check back after the event starts or sync again to pull the latest EPA.
+                {t("event.noStatsSub")}
               </p>
             </div>
           ) : (

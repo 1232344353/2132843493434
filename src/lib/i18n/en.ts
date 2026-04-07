@@ -54,6 +54,15 @@ const en = {
   "dashboard.upgradeSupporter": "Upgrade to Supporter",
   "dashboard.upgradeDesc": "Being a supporter helps keep PitPilot sustainable while we continue offering free access for teams across the community.",
 
+  // Plan tiers
+  "plan.free": "Free",
+  "plan.supporter": "Supporter",
+  "plan.gifted": "Gifted Supporter",
+  "plan.gifterThankYou": "Thanks for helping us test PitPilot early.",
+  "plan.supporterThankYou": "Thank you for supporting us.",
+  "plan.giftedDesc": "Enjoy complimentary Supporter access as a thank-you from our team for helping us test PitPilot early.",
+  "plan.supporterDesc": "Thank you for supporting PitPilot and helping keep the platform free for the wider FRC community.",
+
   // Event Page
   "event.syncStats": "Sync Stats",
   "event.matches": "Matches",
@@ -64,6 +73,17 @@ const en = {
   "event.teamStats": "Team Statistics",
   "event.searchTeams": "Search by team number or name...",
   "event.teamsShown": "{count} team{s} shown",
+  "event.overview": "Event overview",
+  "event.notAttending": "Not Attending",
+  "event.scoutMatchesBtn": "Scout Matches",
+  "event.formSetup": "Form Setup",
+  "event.noStats": "No team stats yet",
+  "event.noStatsSub": "Stats populate once matches begin. Check back after the event starts or sync again to pull the latest EPA.",
+  "event.lastSync": "Last stats sync {time}",
+  "event.notSynced": "Stats not synced yet",
+  "event.notFound": "Event not found",
+  "event.notFoundSub": "Sync event {key} first from the dashboard.",
+  "event.backToDashboard": "Back to dashboard",
 
   // Matches Page
   "matches.title": "Scout matches",
@@ -72,6 +92,9 @@ const en = {
   "matches.qualMatches": "Qualification Matches",
   "matches.playoffMatches": "Playoff Matches",
   "matches.noMatches": "No matches found. Sync the event first.",
+  "matches.tapHint": "Tap a number to scout. Highlighted boxes are your assignments.",
+  "matches.askCaptain": "Ask a captain to sync this event.",
+  "matches.noMatchesFull": "No matches found. Sync the event to pull matches from TBA.",
 
   // Scouting Form
   "scout.progress": "Progress",

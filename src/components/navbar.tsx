@@ -2,9 +2,11 @@ import Link from "next/link";
 import { LogIn } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { UserMenu } from "@/components/user-menu";
+import { getServerT } from "@/lib/i18n/server";
 
 export async function Navbar() {
   const supabase = await createClient();
+  const t = await getServerT();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -58,13 +60,13 @@ export async function Navbar() {
                 className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 transition hover:bg-white/5 hover:text-white"
               >
                 <LogIn className="h-4 w-4" />
-                Sign In
+                {t("nav.signIn")}
               </Link>
               <Link
                 href="/signup"
                 className="rounded-lg bg-teal-500 px-4 py-1.5 text-sm font-semibold text-gray-950 transition hover:bg-teal-400"
               >
-                Get Started
+                {t("nav.getStarted")}
               </Link>
             </>
           )}

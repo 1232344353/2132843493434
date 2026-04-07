@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function deleteAllScoutingReports() {
   const supabase = await createClient();
@@ -27,7 +28,9 @@ export async function deleteAllScoutingReports() {
     return { error: "Only captains can delete scouting reports." } as const;
   }
 
-  const { error } = await supabase
+  // Use admin client to bypass RLS — authorization is enforced above.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("scouting_entries")
     .delete()
     .eq("org_id", profile.org_id);
@@ -58,7 +61,7 @@ export async function deleteScoutingReport(formData: FormData) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("org_id")
+    .select("org_id, role")
     .eq("id", user.id)
     .single();
 
@@ -66,7 +69,32 @@ export async function deleteScoutingReport(formData: FormData) {
     return { error: "No organization found." } as const;
   }
 
-  const { error } = await supabase
+  // Fetch the entry first to verify it belongs to this org and check authorship.
+  const { data: entry } = await supabase
+    .from("scouting_entries")
+    .select("id, scouted_by, org_id")
+    .eq("id", reportId)
+    .single();
+
+  if (!entry) {
+    return { error: "Report not found." } as const;
+  }
+
+  if (entry.org_id !== profile.org_id) {
+    return { error: "Not authorized." } as const;
+  }
+
+  const isOwner = entry.scouted_by === user.id;
+  const isCaptain = profile.role === "captain";
+
+  if (!isOwner && !isCaptain) {
+    return { error: "Only captains can delete other scouts' reports." } as const;
+  }
+
+  // Use admin client to bypass RLS — authorization is enforced above.
+  // This allows captains to remove reports from scouts who have since left the team.
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("scouting_entries")
     .delete()
     .eq("id", reportId)

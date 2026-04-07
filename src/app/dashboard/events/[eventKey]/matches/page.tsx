@@ -8,6 +8,7 @@ import { MatchBriefOverlayButton } from "./match-brief-overlay-button";
 import { PaginatedMatchGrid } from "./paginated-match-grid";
 import { MatchesTour } from "./matches-tour";
 import { SyncEventButton } from "./sync-event-button";
+import { getServerT } from "@/lib/i18n/server";
 
 export async function generateMetadata({
   params,
@@ -34,6 +35,7 @@ export default async function MatchListPage({
 }) {
   const { eventKey } = await params;
   const supabase = await createClient();
+  const t = await getServerT();
 
   const {
     data: { user },
@@ -50,7 +52,10 @@ export default async function MatchListPage({
   if (!event) {
     return (
       <div className="flex min-h-screen items-center justify-center dashboard-page">
-        <p className="text-gray-400">Event not found. Sync it first.</p>
+        <div className="text-center space-y-2">
+          <p className="text-sm font-medium text-gray-300">{t("event.notFound")}</p>
+          <p className="text-xs text-gray-400">{t("event.notFoundSub", { key: eventKey })}</p>
+        </div>
       </div>
     );
   }
@@ -300,23 +305,23 @@ export default async function MatchListPage({
             <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
               {eventTitle}
             </p>
-            <h1 className="text-lg font-bold">Scout matches</h1>
+            <h1 className="text-lg font-bold">{t("matches.title")}</h1>
             <p className="text-xs text-gray-400">
-              Tap a number to scout. Highlighted boxes are your assignments.
+              {t("matches.tapHint")}
             </p>
           </div>
           <Link
             href={`/dashboard/events/${eventKey}`}
             className="back-button"
           >
-            Back
+            {t("common.back")}
           </Link>
         </div>
         <div data-tour="matches-grid">
           {/* Qual Matches */}
           {qualMatches.length > 0 && (
             <PaginatedMatchGrid
-              label="Qualification Matches"
+              label={t("matches.qualMatches")}
               totalCount={qualMatches.length}
               tourId="matches-qual-grid"
               tourFirstCardId="matches-qual-first-card"
@@ -330,7 +335,7 @@ export default async function MatchListPage({
           {/* Playoff Matches */}
           {playoffMatches.length > 0 && (
             <PaginatedMatchGrid
-              label="Playoff Matches"
+              label={t("matches.playoffMatches")}
               totalCount={playoffMatches.length}
               tourId={qualMatches.length === 0 ? "matches-playoff-grid" : undefined}
               tourFirstCardId={
@@ -346,13 +351,13 @@ export default async function MatchListPage({
           {(!matches || matches.length === 0) && (
             <div className="flex flex-col items-center gap-4 py-12">
               <p className="text-center text-sm text-gray-400">
-                No matches found. Sync the event to pull matches from TBA.
+                {t("matches.noMatchesFull")}
               </p>
               {profile?.role === "captain" ? (
                 <SyncEventButton eventKey={eventKey} />
               ) : (
                 <p className="text-center text-xs text-gray-500">
-                  Ask a captain to sync this event.
+                  {t("matches.askCaptain")}
                 </p>
               )}
             </div>

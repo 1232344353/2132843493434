@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Navbar } from "@/components/navbar";
+import { getServerT } from "@/lib/i18n/server";
 import { SyncEventForm } from "./sync-event-form";
 import { LeaveTeamButton } from "@/components/leave-team-button";
 import { CopyInviteLink } from "@/components/copy-invite-link";
@@ -26,6 +27,7 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const t = await getServerT();
 
   const {
     data: { user },
@@ -54,10 +56,10 @@ export default async function DashboardPage() {
   const hasSupporterPlanAccess = hasSupporterAccess(org?.plan_tier);
   const isGiftedSupporter = org?.plan_tier === "gifted_supporter";
   const planTagLabel = isGiftedSupporter
-    ? "Gifted Supporter"
+    ? t("plan.gifted")
     : hasSupporterPlanAccess
-    ? "Supporter"
-    : "Free";
+    ? t("plan.supporter")
+    : t("plan.free");
   const planTagClass = isGiftedSupporter
     ? "bg-blue-500/15 text-blue-300 ring-blue-500/35"
     : hasSupporterPlanAccess
@@ -172,7 +174,7 @@ export default async function DashboardPage() {
             <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 rounded-full bg-teal-500/10 blur-3xl" />
             <div className="relative">
               <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
-                Team Overview
+                {t("dashboard.teamOverview")}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2.5">
                 <h2 className="text-2xl font-bold text-white">
@@ -202,12 +204,12 @@ export default async function DashboardPage() {
               {hasSupporterPlanAccess && (
                 <p className="mt-3 text-xs font-medium text-green-400">
                   {isGiftedSupporter
-                    ? "Thanks for helping us test PitPilot early."
-                    : "Thank you for supporting us."}
+                    ? t("plan.gifterThankYou")
+                    : t("plan.supporterThankYou")}
                 </p>
               )}
               <p className="mt-4 text-sm leading-relaxed text-gray-300">
-                Welcome back, <span className="font-medium text-white">{profile.display_name}</span>. Sync events and keep scouting data flowing for the next match.
+                {t("dashboard.welcomeBack", { name: profile.display_name ?? "" })}
               </p>
               <UsageLimitMeter
                 limit={currentPlanAiLimit}
@@ -221,19 +223,19 @@ export default async function DashboardPage() {
             <div className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
               {[
                 {
-                  label: "Events Synced",
+                  label: t("dashboard.eventsSynced"),
                   value: eventsCount,
-                  sub: "Across all seasons",
+                  sub: t("dashboard.eventsSub"),
                 },
                 {
-                  label: "Team Members",
+                  label: t("dashboard.teamMembers"),
                   value: memberCount ?? 0,
-                  sub: "Scouts and captains",
+                  sub: t("dashboard.membersSub"),
                 },
                 {
-                  label: "Scouting Entries",
+                  label: t("dashboard.scoutingEntries"),
                   value: scoutingCount ?? 0,
-                  sub: "Total logged this season",
+                  sub: t("dashboard.entriesSub"),
                 },
               ].map((stat) => (
                 <div
@@ -263,9 +265,9 @@ export default async function DashboardPage() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
               </div>
               <div>
-                <h3 className="text-base font-semibold text-white">Quick Sync</h3>
+                <h3 className="text-base font-semibold text-white">{t("dashboard.quickSync")}</h3>
                 <p className="text-sm text-gray-400">
-                  Import teams, matches &amp; EPA from TBA.
+                  {t("dashboard.quickSyncDesc")}
                 </p>
               </div>
             </div>
@@ -274,7 +276,7 @@ export default async function DashboardPage() {
                 <SyncEventForm />
               ) : (
                 <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-400">
-                  Only captains can sync events.
+                  {t("dashboard.onlyCaptains")}
                 </div>
               )}
             </div>
@@ -286,10 +288,10 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <h3 className="text-base font-semibold text-white">
-                  Team Settings
+                  {t("dashboard.teamSettings")}
                 </h3>
                 <p className="text-sm text-gray-400">
-                  Manage roles, codes &amp; org details.
+                  {t("dashboard.teamSettingsDesc")}
                 </p>
               </div>
             </div>
@@ -298,7 +300,7 @@ export default async function DashboardPage() {
                 href="/dashboard/settings"
                 className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:border-white/20"
               >
-                Open settings
+                {t("dashboard.openSettings")}
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </Link>
               <LeaveTeamButton />
@@ -306,20 +308,19 @@ export default async function DashboardPage() {
             {hasSupporterPlanAccess ? (
               <div className="mt-3 rounded-xl border border-white/10 px-3 py-3 text-xs text-gray-400 dashboard-panel">
                 <p className="font-semibold text-gray-300">
-                  {isGiftedSupporter ? "Gifted Supporter" : "Supporter"}
+                  {isGiftedSupporter ? t("plan.gifted") : t("plan.supporter")}
                 </p>
                 <p className="mt-1">
                   {isGiftedSupporter
-                    ? "Enjoy complimentary Supporter access as a thank-you from our team for helping us test PitPilot early."
-                    : "Thank you for supporting PitPilot and helping keep the platform free for the wider FRC community."}
+                    ? t("plan.giftedDesc")
+                    : t("plan.supporterDesc")}
                 </p>
               </div>
             ) : profile.role === "captain" ? (
               <div className="mt-3 rounded-xl border border-white/10 px-3 py-3 text-xs text-gray-400 dashboard-panel">
-                <p className="font-semibold text-gray-300">Upgrade to Supporter</p>
+                <p className="font-semibold text-gray-300">{t("dashboard.upgradeSupporter")}</p>
                 <p className="mt-1">
-                  Being a supporter helps keep PitPilot sustainable while we continue offering free access
-                  for teams across the community.
+                  {t("dashboard.upgradeDesc")}
                 </p>
                 <div className="mt-3">
                   <UpgradeSupporterButton />
@@ -338,10 +339,10 @@ export default async function DashboardPage() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-white">
-                  Scouting Reports
+                  {t("dashboard.scoutingReports")}
                 </h3>
                 <p className="text-sm text-gray-400">
-                  The latest entries across your team.
+                  {t("dashboard.latestEntries")}
                 </p>
               </div>
             </div>
@@ -349,7 +350,7 @@ export default async function DashboardPage() {
               href="/dashboard/reports"
               className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:border-white/20"
             >
-              View all
+              {t("dashboard.viewAll")}
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </Link>
           </div>
@@ -401,7 +402,7 @@ export default async function DashboardPage() {
                     </div>
 
                     <p className="mt-2 text-xs text-gray-400">
-                      Scouted by {scouterName}
+                      {t("dashboard.scoutedBy", { name: scouterName })}
                     </p>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -409,7 +410,7 @@ export default async function DashboardPage() {
                         href={`/scout/${report.match_id}/${report.team_number}`}
                         className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-teal-300 dashboard-chip dashboard-chip-action"
                       >
-                        Review
+                        {t("dashboard.review")}
                         <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                       </Link>
                       {event?.tba_key && (
@@ -417,7 +418,7 @@ export default async function DashboardPage() {
                           href={`/dashboard/events/${event.tba_key}`}
                           className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-300 dashboard-chip dashboard-chip-action"
                         >
-                          Event
+                          {t("dashboard.event")}
                           <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                         </Link>
                       )}
@@ -431,9 +432,9 @@ export default async function DashboardPage() {
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               </div>
-              <p className="text-sm font-medium text-gray-300">No scouting reports yet</p>
+              <p className="text-sm font-medium text-gray-300">{t("dashboard.noReports")}</p>
               <p className="mt-1 text-xs text-gray-400">
-                Head to an event and scout a match to build your history.
+                {t("dashboard.noReportsSub")}
               </p>
             </div>
           )}
@@ -445,7 +446,7 @@ export default async function DashboardPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10 text-teal-400">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
-            <h3 className="text-lg font-semibold text-white">Your Events</h3>
+            <h3 className="text-lg font-semibold text-white">{t("dashboard.yourEvents")}</h3>
           </div>
 
           {!orgEvents || orgEvents.length === 0 ? (
@@ -454,10 +455,10 @@ export default async function DashboardPage() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
               </div>
               <p className="text-sm font-medium text-gray-300">
-                No events synced yet
+                {t("dashboard.noEvents")}
               </p>
               <p className="mt-1 text-xs text-gray-400">
-                Use Quick Sync above to import your first event.
+                {t("dashboard.noEventsSub")}
               </p>
             </div>
           ) : (
@@ -493,16 +494,16 @@ export default async function DashboardPage() {
               )}
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Team Pulse</h3>
+              <h3 className="text-lg font-semibold text-white">{t("dashboard.teamPulse")}</h3>
               <p className="text-sm text-gray-400">
-                Strategy chatter &amp; team updates.
+                {t("dashboard.teamPulseDesc")}
               </p>
             </div>
           </div>
           <div className="rounded-2xl dashboard-panel dashboard-card p-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-sm text-gray-300">
-                <span className="font-semibold text-white">{(pulseCount ?? 0).toLocaleString()}</span> new updates in the last 24 hours
+                {t("dashboard.newUpdates", { count: (pulseCount ?? 0).toLocaleString() })}
               </p>
               {lastPulse?.created_at ? (
                 <p className="mt-1 text-xs text-gray-400">
@@ -514,7 +515,7 @@ export default async function DashboardPage() {
                 </p>
               ) : (
                 <p className="mt-1 text-xs text-gray-400">
-                  No updates yet. Start the conversation in Team Pulse.
+                  {t("dashboard.noUpdates")}
                 </p>
               )}
             </div>
@@ -523,7 +524,7 @@ export default async function DashboardPage() {
               className="inline-flex items-center gap-2 rounded-lg bg-green-500/10 border border-green-500/20 px-4 py-2 text-sm font-medium text-green-300 transition hover:bg-green-500/15 hover:border-green-500/30"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              Open channel
+              {t("dashboard.openChannel")}
             </Link>
           </div>
         </AnimateIn>
