@@ -883,7 +883,11 @@ export function EventCustomizeForm({
                           <input
                             type="text"
                             value={opt.label}
-                            onChange={(e) => patchField({ options: (field.options ?? []).map((o, oi) => oi === oIdx ? { ...o, label: e.target.value } : o) })}
+                            onChange={(e) => {
+                              const label = e.target.value;
+                              const key = label.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") || `opt_${oIdx}`;
+                              patchField({ options: (field.options ?? []).map((o, oi) => oi === oIdx ? { ...o, key, label } : o) });
+                            }}
                             placeholder={`Option ${oIdx + 1}`}
                             className="dashboard-input flex-1 px-2 py-1 text-xs"
                           />
@@ -1174,7 +1178,11 @@ export function EventCustomizeForm({
                                 <input
                                   type="text"
                                   value={opt.label}
-                                  onChange={(e) => patchField({ options: (field.options ?? []).map((o, oi) => oi === oIdx ? { ...o, label: e.target.value } : o) })}
+                                  onChange={(e) => {
+                                    const label = e.target.value;
+                                    const key = label.toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") || `opt_${oIdx}`;
+                                    patchField({ options: (field.options ?? []).map((o, oi) => oi === oIdx ? { ...o, key, label } : o) });
+                                  }}
                                   placeholder={`Option ${oIdx + 1}`}
                                   className="dashboard-input flex-1 px-2 py-1 text-xs"
                                 />

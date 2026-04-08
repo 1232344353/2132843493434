@@ -31,12 +31,18 @@ function escapeHtml(str: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function formatList(items: string[]): string {
   if (items.length === 0) return "—";
   return items.join(", ");
+}
+
+function formatRating(value: number | null): string {
+  if (value === null) return "—";
+  return `${value}/5`;
 }
 
 function formatAbilities(answers: Record<string, boolean> | null): string {
@@ -67,8 +73,8 @@ export function PrintScoutingButton({
             <td>${escapeHtml(formatList(r.climbLevels))}</td>
             <td>${r.autoScore + r.teleopScore + r.endgameScore}</td>
             <td>${escapeHtml(formatList(r.shootingRanges))}</td>
-            <td>${r.shootingReliability ?? "—"}/5</td>
-            <td>${r.cycleTimeRating ?? "—"}/5</td>
+            <td>${formatRating(r.shootingReliability)}</td>
+            <td>${formatRating(r.cycleTimeRating)}</td>
             <td>${r.defenseRating}/5</td>
             <td>${r.reliabilityRating}/5</td>
             <td style="max-width:180px;word-wrap:break-word;font-size:9px">${escapeHtml(formatAbilities(r.abilityAnswers))}</td>
@@ -132,8 +138,16 @@ export function PrintScoutingButton({
 </html>`;
 
     const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-    printWindow.document.write(html);
+    if (!printWindow) {
+      alert("Your browser blocked the print window. Please allow pop-ups for this site and try again.");
+      return;
+    }
+    printWindow.document.open();
+    if (printWindow.document.documentElement) {
+      printWindow.document.documentElement.innerHTML = html;
+    } else {
+      printWindow.document.write(html);
+    }
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
