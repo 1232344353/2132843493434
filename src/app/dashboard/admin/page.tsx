@@ -46,21 +46,55 @@ export default async function AdminPage() {
     adminSupabase.from("events").select("id", { count: "exact", head: true }),
   ]);
 
-  const { data: testimonials } = await adminSupabase
+  const parallelErrors = [
+    orgsRes?.error,
+    profilesRes?.error,
+    entriesRes?.error,
+    matchesRes?.error,
+    eventsRes?.error,
+  ].filter(Boolean);
+
+  if (parallelErrors.length > 0) {
+    // If any of the parallel queries failed, redirect to a safe page
+    redirect("/dashboard");
+  }
+
+  const { data: testimonialsData, error: testimonialsError } = await adminSupabase
     .from("testimonials")
     .select("*")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
-  const { data: announcements } = await adminSupabase
+  if (testimonialsError) {
+    console.error("Failed to fetch testimonials:", testimonialsError);
+  }
+
+  const testimonials = testimonialsData ?? [];
+
+  const { data: announcements, error: announcementsError } = await adminSupabase
     .from("announcements")
     .select("*")
     .order("created_at", { ascending: false });
 
-  const { data: contactMessages } = await adminSupabase
+  if (announcementsError) {
+    console.error("Error fetching announcements:", announcementsError);
+  }
+
+  const safeAnnouncements = announcements ?? [];
+
+  const {
+    data: contactMessagesData,
+    error: contactMessagesError,
+  } = await adminSupabase
     .from("contact_messages")
     .select("id, email, subject, message, status, response, created_at, responded_at")
     .order("created_at", { ascending: false });
+
+  if (contactMessagesError) {
+    console.error("Failed to load contact messages:", contactMessagesError);
+  }
+
+  const contactMessages = contactMessagesData ?? [];
 
   // Analytics: signups over time (last 30 days)
   const thirtyDaysAgo = new Date();
@@ -89,6 +123,19 @@ export default async function AdminPage() {
       .gte("created_at", cutoff)
       .order("created_at", { ascending: true }),
   ]);
+
+  if (signupsRes.error || orgsTimeRes.error || entriesTimeRes.error || messagesTimeRes.error) {
+    throw new Error(
+      [
+        signupsRes.error && `signups: ${signupsRes.error.message}`,
+        orgsTimeRes.error && `organizations: ${orgsTimeRes.error.message}`,
+        entriesTimeRes.error && `scouting_entries: ${entriesTimeRes.error.message}`,
+        messagesTimeRes.error && `team_messages: ${messagesTimeRes.error.message}`,
+      ]
+        .filter(Boolean)
+        .join("; ") || "Failed to load analytics data",
+    );
+  }
 
   // Aggregate by day
   function aggregateByDay(rows: { created_at: string }[] | null): { date: string; count: number }[] {
@@ -134,9 +181,9 @@ export default async function AdminPage() {
           events: eventsRes.count ?? 0,
         }}
         organizations={orgsRes.data ?? []}
-        testimonials={testimonials ?? []}
-        announcements={announcements ?? []}
-        contactMessages={contactMessages ?? []}
+        testimonials={testimonials}
+        announcements={safeAnnouncements}
+        contactMessages={contactMessages}
         analytics={analytics}
         eventSyncMinYear={eventSyncMinYear}
         scoutingAbilityQuestions={scoutingAbilityQuestions}
