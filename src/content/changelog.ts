@@ -14,6 +14,15 @@ export interface ChangelogWeek {
 
 export const changelog: ChangelogWeek[] = [
   {
+    week: "Apr 11",
+    title: "New dashboard and Google sign-in",
+    summary: "The dashboard got a full visual overhaul, and you can now sign in with Google — no magic link needed.",
+    changes: [
+      { type: "improved", text: "Dashboard UI overhauled with a cleaner layout and updated visuals across all pages" },
+      { type: "new", text: "Sign in or sign up with Google as an alternative to magic link email" },
+    ],
+  },
+  {
     week: "Apr 6",
     title: "Spanish and French",
     summary: "The full app now speaks your language, and captains can clean up reports from scouts who've left.",
