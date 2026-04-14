@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TeamStatsTable } from "./team-stats-table";
-import { Navbar } from "@/components/navbar";
 import { SyncStatsButton } from "./sync-stats-button";
 import { EventTour } from "./event-tour";
 import { getServerT } from "@/lib/i18n/server";
@@ -198,89 +197,158 @@ export default async function EventPage({
 
   return (
     <div className="min-h-screen dashboard-page">
-      <Navbar />
       <EventTour />
-      <main className="mx-auto max-w-7xl px-4 pb-12 pt-32">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div data-tour="event-header">
-            <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
-              {t("event.overview")}
-            </p>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="text-2xl font-bold leading-tight">{eventTitle}</h1>
+      <main className="mx-auto max-w-7xl px-6 pb-12 pt-10">
+
+        {/* ── Event header card ── */}
+        <div data-tour="event-header" className="mb-6 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02]">
+          {/* Top accent line */}
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-teal-400/40 to-transparent" />
+
+          <div className="px-6 py-5">
+            {/* Breadcrumb + back */}
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
+                {t("event.overview")}
+              </p>
+              <Link
+                href="/dashboard/events"
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-white/20 hover:text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+                {t("common.back")}
+              </Link>
+            </div>
+
+            {/* Title row */}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold leading-tight text-white">{eventTitle}</h1>
               {orgTeamNumber !== null && !isOrgInEvent && (
-                <span className="inline-flex rounded-full bg-teal-500/20 px-3 py-1 text-xs font-medium text-teal-600 dark:text-teal-300">
+                <span className="rounded-full bg-white/[0.06] px-2.5 py-0.5 text-[11px] font-medium text-gray-400 ring-1 ring-white/10">
                   {t("event.notAttending")}
                 </span>
               )}
             </div>
-            <p className="mt-1 text-sm text-gray-400">
-              {event.location} &middot; {event.year} &middot;{" "}
-              {teamCount} teams &middot; {matchCount ?? 0} matches
-            </p>
-            <p className="mt-1 text-xs text-gray-400">
-              {lastSyncLabel
-                ? t("event.lastSync", { time: lastSyncLabel })
-                : t("event.notSynced")}
-            </p>
+
+            {/* Meta chips */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {event.location && (
+                <span className="flex items-center gap-1.5 rounded-full bg-white/[0.04] px-3 py-1 text-xs text-gray-400 ring-1 ring-white/[0.07]">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-60">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  {event.location}
+                </span>
+              )}
+              <span className="rounded-full bg-white/[0.04] px-3 py-1 text-xs text-gray-400 ring-1 ring-white/[0.07]">
+                {event.year}
+              </span>
+              <span className="rounded-full bg-white/[0.04] px-3 py-1 text-xs text-gray-400 ring-1 ring-white/[0.07]">
+                {teamCount} teams
+              </span>
+              <span className="rounded-full bg-white/[0.04] px-3 py-1 text-xs text-gray-400 ring-1 ring-white/[0.07]">
+                {matchCount} matches
+              </span>
+              {lastSyncLabel && (
+                <span className="rounded-full bg-white/[0.04] px-3 py-1 text-xs text-gray-500 ring-1 ring-white/[0.07]">
+                  {t("event.lastSync", { time: lastSyncLabel })}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* ── Nav tab strip ── */}
+          <div data-tour="event-actions" className="flex items-center gap-0.5 border-t border-white/[0.06] px-3 py-2">
+            <Link
+              href={`/dashboard/events/${eventKey}/matches`}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-teal-300 transition hover:bg-teal-500/10"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+              </svg>
+              {t("event.scoutMatchesBtn")}
+            </Link>
+
+            <div className="mx-1 h-4 w-px bg-white/10" />
+
             {profile?.role === "captain" && (
-              <div className="mt-3">
+              <Link
+                href={`/dashboard/events/${eventKey}/assignments`}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
+                </svg>
+                {t("event.assignments")}
+              </Link>
+            )}
+
+            <Link
+              href={`/dashboard/events/${eventKey}/analytics`}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+              </svg>
+              {t("event.analytics")}
+            </Link>
+
+            <Link
+              href={`/dashboard/events/${eventKey}/scouting-overview`}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+              </svg>
+              Scout Reports
+            </Link>
+
+            {isOrgInEvent && (
+              <Link
+                href={`/dashboard/events/${eventKey}/draft`}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                </svg>
+                {t("event.draftRoom")}
+              </Link>
+            )}
+
+            <Link
+              href={`/dashboard/events/${eventKey}/picklist`}
+              className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+              Pick List
+            </Link>
+
+            {profile?.role === "captain" && (
+              <Link
+                href={`/dashboard/events/${eventKey}/customize`}
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-gray-400 transition hover:bg-white/5 hover:text-gray-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                {t("event.formSetup")}
+              </Link>
+            )}
+
+            {/* Sync stats pushed to the right */}
+            {profile?.role === "captain" && (
+              <div className="ml-auto">
                 <SyncStatsButton eventKey={eventKey} compact />
               </div>
             )}
           </div>
-          <div data-tour="event-actions" className="flex flex-wrap gap-2">
-            <Link
-              href={`/dashboard/events/${eventKey}/matches`}
-              className="dashboard-action dashboard-action-primary dashboard-action-holo"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-              {t("event.scoutMatchesBtn")}
-            </Link>
-            {profile?.role === "captain" && (
-              <Link
-                href={`/dashboard/events/${eventKey}/assignments`}
-                className="dashboard-action dashboard-action-ghost"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                {t("event.assignments")}
-              </Link>
-            )}
-            <Link
-              href={`/dashboard/events/${eventKey}/analytics`}
-              className="dashboard-action dashboard-action-ghost"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-              {t("event.analytics")}
-            </Link>
-            {isOrgInEvent && (
-              <Link
-                href={`/dashboard/events/${eventKey}/draft`}
-                className="dashboard-action dashboard-action-ghost"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                {t("event.draftRoom")}
-              </Link>
-            )}
-            {profile?.role === "captain" && (
-              <Link
-                href={`/dashboard/events/${eventKey}/customize`}
-                className="dashboard-action dashboard-action-ghost"
-                title="Customize scouting form"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                {t("event.formSetup")}
-              </Link>
-            )}
-            <Link
-              href="/dashboard"
-              className="back-button"
-            >
-              {t("common.back")}
-            </Link>
-          </div>
         </div>
 
+        {/* ── Team stats table ── */}
         <div data-tour="event-team-stats">
           {tableData.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/10 dashboard-panel p-10 text-center">
