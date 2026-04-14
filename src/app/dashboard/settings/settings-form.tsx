@@ -69,9 +69,7 @@ export function TeamSettingsForm({
   // Team settings state
   const [teamName, setTeamName] = useState(org.name);
   const [teamLoading, setTeamLoading] = useState(false);
-  const [teamMessage, setTeamMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [planLoading, setPlanLoading] = useState(false);
-  const [planMessage, setPlanMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showCheckoutCelebration, setShowCheckoutCelebration] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [kickLoadingMemberId, setKickLoadingMemberId] = useState<string | null>(null);
@@ -79,6 +77,7 @@ export function TeamSettingsForm({
     id: string;
     name: string;
   } | null>(null);
+  const [memberSearch, setMemberSearch] = useState("");
   const isGiftedSupporter = org.planTier === "gifted_supporter";
   const hasSupporterPlanAccess = hasSupporterAccess(org.planTier);
 
@@ -96,10 +95,7 @@ export function TeamSettingsForm({
 
     if (billingState === "success") {
       setShowCheckoutCelebration(true);
-      setPlanMessage({
-        type: "success",
-        text: "Supporter checkout completed. Updating your team plan...",
-      });
+      toast("Supporter checkout completed. Updating your team plan...", "success");
 
       if (typeof window !== "undefined") {
         reloadTimer = window.setTimeout(() => {
@@ -119,18 +115,12 @@ export function TeamSettingsForm({
     setShowCheckoutCelebration(false);
 
     if (billingState === "cancel") {
-      setPlanMessage({
-        type: "error",
-        text: "Checkout canceled. No billing changes were made.",
-      });
+      toast("Checkout canceled. No billing changes were made.", "error");
       return;
     }
 
     if (billingState === "portal") {
-      setPlanMessage({
-        type: "success",
-        text: "Returned from billing portal.",
-      });
+      toast("Returned from billing portal.", "info");
     }
 
     return () => {
@@ -143,16 +133,15 @@ export function TeamSettingsForm({
   async function handleTeamSubmit(e: React.FormEvent) {
     e.preventDefault();
     setTeamLoading(true);
-    setTeamMessage(null);
 
     const formData = new FormData();
     formData.set("name", teamName);
 
     const result = await updateOrganization(formData);
     if (result?.error) {
-      setTeamMessage({ type: "error", text: result.error });
+      toast(result.error, "error");
     } else {
-      setTeamMessage({ type: "success", text: "Team name updated." });
+      toast("Team name updated.", "success");
       router.refresh();
     }
     setTeamLoading(false);
@@ -193,7 +182,6 @@ export function TeamSettingsForm({
 
   async function handleUpgradeCheckout() {
     setPlanLoading(true);
-    setPlanMessage(null);
 
     try {
       const res = await fetch("/api/stripe/checkout", { method: "POST" });
@@ -208,14 +196,13 @@ export function TeamSettingsForm({
       window.location.assign(data.url);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to start checkout.";
-      setPlanMessage({ type: "error", text: message });
+      toast(message, "error");
       setPlanLoading(false);
     }
   }
 
   async function handleManageBilling() {
     setPlanLoading(true);
-    setPlanMessage(null);
 
     try {
       const res = await fetch("/api/stripe/portal", { method: "POST" });
@@ -230,7 +217,7 @@ export function TeamSettingsForm({
       window.location.assign(data.url);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to open billing portal.";
-      setPlanMessage({ type: "error", text: message });
+      toast(message, "error");
       setPlanLoading(false);
     }
   }
@@ -470,18 +457,6 @@ export function TeamSettingsForm({
             </div>
           </div>
 
-          {teamMessage && (
-            <p
-              className={`rounded-lg border px-3 py-2 text-sm ${
-                teamMessage.type === "success"
-                  ? "border-green-400/30 bg-green-500/10 text-green-300"
-                  : "border-red-400/30 bg-red-500/10 text-red-300"
-              }`}
-            >
-              {teamMessage.text}
-            </p>
-          )}
-
           {isCaptain && (
             <button
               type="submit"
@@ -496,12 +471,36 @@ export function TeamSettingsForm({
 
       {isCaptain && (
         <div className="rounded-2xl dashboard-panel dashboard-card p-6">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold text-white">Members & Permissions</h3>
               <p className="mt-0.5 text-sm text-gray-400">
                 {members.length} member{members.length !== 1 ? "s" : ""} on this team
               </p>
+            </div>
+            <div className="relative">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search members..."
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="h-8 rounded-lg border border-white/10 bg-white/[0.03] pl-8 pr-3 text-xs text-white placeholder:text-gray-600 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition"
+              />
             </div>
           </div>
 
@@ -516,11 +515,23 @@ export function TeamSettingsForm({
                   if (a.role === b.role) return 0;
                   return a.role === "captain" ? -1 : 1;
                 });
-                return sorted.map((member, idx) => {
+                const filtered = memberSearch.trim()
+                  ? sorted.filter((m) =>
+                      m.display_name.toLowerCase().includes(memberSearch.toLowerCase())
+                    )
+                  : sorted;
+                if (filtered.length === 0) {
+                  return (
+                    <p className="px-4 py-4 text-sm text-gray-500">
+                      No members match &ldquo;{memberSearch}&rdquo;.
+                    </p>
+                  );
+                }
+                return filtered.map((member, idx) => {
                   const isCurrentUser = member.id === currentUserId;
                   const isRemoving = kickLoadingMemberId === member.id;
                   const isCaptainRole = member.role === "captain";
-                  const nextMember = sorted[idx + 1];
+                  const nextMember = filtered[idx + 1];
                   const showDivider = isCurrentUser && nextMember;
 
                   return (
@@ -784,17 +795,6 @@ export function TeamSettingsForm({
             </p>
           )}
 
-          {planMessage && (
-            <p
-              className={`rounded-lg border px-3 py-2 text-sm ${
-                planMessage.type === "success"
-                  ? "border-green-400/30 bg-green-500/10 text-green-300"
-                  : "border-red-400/30 bg-red-500/10 text-red-300"
-              }`}
-            >
-              {planMessage.text}
-            </p>
-          )}
         </div>
       </div>
 

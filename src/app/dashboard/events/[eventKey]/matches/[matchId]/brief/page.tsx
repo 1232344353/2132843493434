@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { BriefContentSchema, type BriefContent } from "@/types/strategy";
 import { GenerateBriefButton } from "./generate-button";
 import { BriefAllianceChart } from "./brief-alliance-chart";
-import { Navbar } from "@/components/navbar";
 import {
   isEpaOnlyScoutingInsight,
   stripEpaOnlyScoutingPrefix,
@@ -181,11 +180,10 @@ export default async function BriefPage({
 
   return (
     <div className="min-h-screen dashboard-page">
-      <Navbar />
-      <main className="mx-auto max-w-4xl px-4 pb-12 pt-32 space-y-6">
+      <main className="mx-auto max-w-4xl px-6 pb-12 pt-10 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-blue-400">
+            <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
               {eventTitle}
             </p>
             <h1 className="text-lg font-bold">
@@ -194,8 +192,9 @@ export default async function BriefPage({
           </div>
           <Link
             href={`/dashboard/events/${eventKey}/matches`}
-            className="back-button"
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-white/20 hover:text-white"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
             Back
           </Link>
         </div>

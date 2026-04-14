@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Navbar } from "@/components/navbar";
 import { ReportsList } from "./reports-list";
 
 export const metadata: Metadata = {
@@ -54,8 +53,7 @@ export default async function ReportsPage() {
 
   return (
     <div className="min-h-screen dashboard-page">
-      <Navbar />
-      <main className="mx-auto max-w-5xl px-4 pb-12 pt-32 space-y-6">
+      <main className="mx-auto max-w-5xl px-4 pb-12 pt-10 space-y-6">
         <ReportsList
           initialReports={normalizedReports as never}
           orgId={profile.org_id}

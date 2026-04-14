@@ -41,6 +41,7 @@ export async function updateSession(request: NextRequest) {
     "/privacy",
     "/changelog",
     "/contact",
+    "/dashboard/preview", // temp: sidebar layout preview without auth
     "/auth/callback",
     "/api/health",
     "/api/stripe/webhook",

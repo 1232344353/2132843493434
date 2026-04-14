@@ -187,31 +187,33 @@ export function SyncEventForm() {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border border-white/10 px-3 py-2 text-xs text-gray-400 dashboard-panel">
-        <p className="font-semibold text-gray-300">Where to find the event key</p>
-        <p className="mt-1">
-          Open the event on <a href="https://www.thebluealliance.com/events" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">The Blue Alliance</a> and copy the part after
-          <span className="font-mono text-gray-200"> /event/ </span>
-          in the URL. Example:
-          <span className="ml-1 font-mono text-gray-200">2025hiho</span>.
-        </p>
-      </div>
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={eventKey}
-          onChange={(e) => setEventKey(e.target.value)}
-          placeholder="TBA event key (e.g. 2025hiho)"
-          className="flex-1 rounded-lg px-3 py-2 text-sm text-white shadow-sm placeholder:text-gray-500 dashboard-input"
-          disabled={loading}
-        />
-        <button
-          onClick={handleSync}
-          disabled={loading || !eventKey.trim()}
-          className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-400 disabled:opacity-50"
-        >
-          {loading ? "Syncing..." : "Sync Event"}
-        </button>
+      <div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={eventKey}
+            onChange={(e) => setEventKey(e.target.value)}
+            placeholder="TBA event key (e.g. 2025hiho)"
+            className="flex-1 rounded-lg px-3 py-2 text-sm text-white shadow-sm placeholder:text-gray-500 dashboard-input"
+            disabled={loading}
+          />
+          <button
+            onClick={handleSync}
+            disabled={loading || !eventKey.trim()}
+            className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-400 disabled:opacity-50"
+          >
+            {loading ? "Syncing..." : "Sync Event"}
+          </button>
+        </div>
+        {!loading && (
+          <p className="mt-2 text-[11px] text-gray-600">
+            Find the key after <span className="font-mono">/event/</span> in the{" "}
+            <a href="https://www.thebluealliance.com/events" target="_blank" rel="noopener noreferrer" className="hover:text-gray-500">
+              TBA URL
+            </a>
+            , e.g. <span className="font-mono">2025hiho</span>
+          </p>
+        )}
       </div>
       {(loading || progress > 0) && (
         <div className="space-y-3">

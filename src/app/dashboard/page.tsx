@@ -2,13 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Navbar } from "@/components/navbar";
 import { getServerT } from "@/lib/i18n/server";
-import { SyncEventForm } from "./sync-event-form";
-import { LeaveTeamButton } from "@/components/leave-team-button";
-import { CopyInviteLink } from "@/components/copy-invite-link";
-import { SortableEvents } from "@/components/sortable-events";
 import { AnimateIn, StaggerGroup, StaggerChild } from "@/components/ui/animate-in";
+import { PinnedEventHero } from "./pinned-event-hero";
+import { DashboardTour } from "./dashboard-tour";
+import { UsageLimitMeter } from "./usage-limit-meter";
 import {
   TEAM_AI_WINDOW_MS,
   getTeamAiRateLimitKey,
@@ -16,14 +14,64 @@ import {
   peekRateLimit,
 } from "@/lib/rate-limit";
 import { getTeamAiPromptLimits } from "@/lib/platform-settings";
-import { UsageLimitMeter } from "./usage-limit-meter";
-import { UpgradeSupporterButton } from "@/components/upgrade-supporter-button";
-import { DashboardTour } from "./dashboard-tour";
 
 export const metadata: Metadata = {
   title: "Dashboard | PitPilot",
   description: "Your FRC scouting dashboard: manage events, view data, and access AI strategy tools.",
 };
+
+const PLAN_LABELS = {
+  free: "Free",
+  supporter: "Supporter",
+  gifted_supporter: "Gifted Supporter",
+} as const;
+
+const PLAN_BADGE_STYLES = {
+  free: "border-white/10 bg-white/[0.04] text-gray-400",
+  supporter: "border-teal-500/30 bg-teal-500/[0.12] text-teal-300 shadow-[0_0_10px_rgba(20,184,166,0.12)]",
+  gifted_supporter: "border-amber-500/30 bg-amber-500/[0.12] text-amber-300 shadow-[0_0_10px_rgba(245,158,11,0.15)]",
+} as const;
+
+const PLAN_ICONS = {
+  free: null,
+  supporter: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+      <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/>
+    </svg>
+  ),
+  gifted_supporter: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true">
+      <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"/>
+    </svg>
+  ),
+} as const;
+
+function formatDate(value?: string | null) {
+  if (!value) return "TBA";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return value;
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+
+function compLabel(compLevel: string, matchNumber: number, setNumber?: number | null) {
+  const hasLegacy = compLevel !== "qm" && !setNumber && matchNumber >= 100;
+  const normalizedSet = hasLegacy ? Math.floor(matchNumber / 100) : setNumber ?? null;
+  const normalizedMatch = hasLegacy ? matchNumber % 100 : matchNumber;
+  if (compLevel === "qm") return `Qual ${normalizedMatch}`;
+  const prefix = compLevel === "sf" ? "SF" : compLevel === "f" ? "F" : compLevel.toUpperCase();
+  return normalizedSet ? `${prefix} ${normalizedSet}-${normalizedMatch}` : `${prefix} ${normalizedMatch}`;
+}
+
+function getEventStatus(startDate: string | null, endDate: string | null) {
+  if (!startDate) return null;
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = endDate ? new Date(endDate) : null;
+  if (end && now > end) return "past";
+  if (now >= start && (!end || now <= end)) return "live";
+  return "upcoming";
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -33,38 +81,22 @@ export default async function DashboardPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
+  if (!user) redirect("/login");
 
-  // Get profile with org info
   const { data: profile } = await supabase
     .from("profiles")
     .select("*, organizations(*)")
     .eq("id", user.id)
     .single();
 
-  // If no org, redirect website admins to admin dashboard, others to join/create flow
   if (!profile?.org_id) {
-    if (profile?.is_staff) {
-      redirect("/dashboard/admin");
-    }
+    if (profile?.is_staff) redirect("/dashboard/admin");
     redirect("/join");
   }
 
   const org = profile.organizations;
+  const planTier = (org?.plan_tier ?? "free") as keyof typeof PLAN_LABELS;
   const hasSupporterPlanAccess = hasSupporterAccess(org?.plan_tier);
-  const isGiftedSupporter = org?.plan_tier === "gifted_supporter";
-  const planTagLabel = isGiftedSupporter
-    ? t("plan.gifted")
-    : hasSupporterPlanAccess
-    ? t("plan.supporter")
-    : t("plan.free");
-  const planTagClass = isGiftedSupporter
-    ? "bg-blue-500/15 text-blue-300 ring-blue-500/35"
-    : hasSupporterPlanAccess
-    ? "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30"
-    : "bg-white/10 text-gray-300 ring-white/20";
   const teamAiPromptLimits = await getTeamAiPromptLimits(supabase);
   const currentPlanAiLimit = teamAiPromptLimits[hasSupporterPlanAccess ? "supporter" : "free"];
   const aiUsage = await peekRateLimit(
@@ -73,125 +105,87 @@ export default async function DashboardPage() {
     currentPlanAiLimit
   );
 
-  const formatDate = (value?: string | null) => {
-    if (!value) return "TBA";
-    const date = new Date(value);
-    if (Number.isNaN(date.valueOf())) return value;
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
   const { data: orgEvents } = await supabase
     .from("org_events")
-    .select(
-      "id, is_attending, created_at, events(id, tba_key, name, location, start_date, end_date, year)"
-    )
+    .select("id, is_attending, is_pinned, created_at, events(id, tba_key, name, location, start_date, end_date, year)")
     .eq("org_id", profile.org_id)
     .order("created_at", { ascending: false });
 
-  const compLabel = (
-    compLevel: string,
-    matchNumber: number,
-    setNumber?: number | null
-  ) => {
-    const hasLegacy = compLevel !== "qm" && !setNumber && matchNumber >= 100;
-    const normalizedSet = hasLegacy
-      ? Math.floor(matchNumber / 100)
-      : setNumber ?? null;
-    const normalizedMatch = hasLegacy ? matchNumber % 100 : matchNumber;
-
-    if (compLevel === "qm") return `Qual ${normalizedMatch}`;
-
-    const prefix =
-      compLevel === "sf"
-        ? "SF"
-        : compLevel === "f"
-        ? "F"
-        : compLevel.toUpperCase();
-
-    return normalizedSet
-      ? `${prefix} ${normalizedSet}-${normalizedMatch}`
-      : `${prefix} ${normalizedMatch}`;
-  };
+  const pinnedOrgEvent = orgEvents?.find((oe) => oe.is_pinned) ?? null;
+  const pinnedEvent = pinnedOrgEvent?.events ?? null;
 
   const eventsCount = orgEvents?.length ?? 0;
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const [
     { count: memberCount },
     { count: scoutingCount },
+    { count: scoutingWeekCount },
     { data: reportPreview },
+    { data: leaderboardRaw },
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("org_id", profile.org_id),
-    supabase
-      .from("scouting_entries")
-      .select("*", { count: "exact", head: true })
-      .eq("org_id", profile.org_id),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("org_id", profile.org_id),
+    supabase.from("scouting_entries").select("*", { count: "exact", head: true }).eq("org_id", profile.org_id),
+    supabase.from("scouting_entries").select("*", { count: "exact", head: true }).eq("org_id", profile.org_id).gte("created_at", weekAgo),
     supabase
       .from("scouting_entries")
-      .select(
-        "id, created_at, team_number, match_id, auto_score, teleop_score, endgame_score, notes, profiles(display_name), matches (comp_level, match_number, set_number, events (name, year, tba_key))"
-      )
+      .select("id, created_at, team_number, match_id, auto_score, teleop_score, endgame_score, notes, profiles(display_name), matches(comp_level, match_number, set_number, events(name, year, tba_key))")
       .eq("org_id", profile.org_id)
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("scouting_entries")
+      .select("scouted_by, profiles(display_name)")
+      .eq("org_id", profile.org_id),
   ]);
+
+  // Build leaderboard: count entries per scout
+  const scoutCounts = new Map<string, { name: string; count: number }>();
+  for (const entry of leaderboardRaw ?? []) {
+    const p = Array.isArray(entry.profiles) ? entry.profiles[0] : entry.profiles;
+    const name = (p as { display_name?: string | null } | null)?.display_name ?? "Scout";
+    const existing = scoutCounts.get(entry.scouted_by);
+    if (existing) existing.count++;
+    else scoutCounts.set(entry.scouted_by, { name, count: 1 });
+  }
+  const leaderboard = Array.from(scoutCounts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+
+  const eventStatus = pinnedEvent
+    ? getEventStatus(pinnedEvent.start_date, pinnedEvent.end_date)
+    : null;
 
   return (
     <div className="min-h-screen dashboard-page">
-      <Navbar />
       <DashboardTour />
 
-      {/* Main content */}
-      <main className="mx-auto max-w-7xl px-4 pb-12 pt-28">
-        {/* ─── Hero + Stats ─── */}
-        <StaggerGroup className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr]">
-          <StaggerChild className="relative overflow-hidden rounded-3xl dashboard-panel dashboard-card p-6">
-            {/* Subtle gradient accent */}
-            <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 rounded-full bg-teal-500/10 blur-3xl" />
+      <main className="mx-auto max-w-7xl px-6 pb-16 pt-10">
+
+        {/* ── Greeting box ── */}
+        <AnimateIn delay={0} className="mb-6">
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] px-6 py-5">
+            <div className="pointer-events-none absolute right-0 top-0 h-32 w-48 rounded-full bg-teal-500/[0.07] blur-3xl" />
             <div className="relative">
-              <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
-                {t("dashboard.teamOverview")}
-              </p>
-              <div className="mt-2 flex flex-wrap items-center gap-2.5">
-                <h2 className="text-2xl font-bold text-white">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
                   {org?.team_number ? `Team ${org.team_number}` : org?.name}
-                </h2>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${planTagClass}`}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg>
-                  {planTagLabel}
-                </span>
-              </div>
-              {org?.team_number && org?.name && (
-                <p className="mt-1 text-sm text-gray-300">{org.name}</p>
-              )}
-              <div className="mt-4 flex flex-wrap items-center gap-2.5">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-500/15 px-3 py-1.5 text-xs font-semibold capitalize text-teal-400 dark:text-teal-300 ring-1 ring-teal-500/20">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
-                  {profile.role}
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full bg-violet-500/15 px-3 py-1.5 text-xs font-semibold text-violet-600 dark:text-violet-300 ring-1 ring-violet-500/20">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                  <span className="font-mono">{org?.join_code}</span>
-                </span>
-                {org?.join_code && <CopyInviteLink joinCode={org.join_code} />}
-              </div>
-              {hasSupporterPlanAccess && (
-                <p className="mt-3 text-xs font-medium text-green-400">
-                  {isGiftedSupporter
-                    ? t("plan.gifterThankYou")
-                    : t("plan.supporterThankYou")}
                 </p>
-              )}
-              <p className="mt-4 text-sm leading-relaxed text-gray-300">
-                {t("dashboard.welcomeBack", { name: profile.display_name ?? "" })}
+                {planTier !== "free" && (
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${PLAN_BADGE_STYLES[planTier]}`}
+                  >
+                    {PLAN_ICONS[planTier]}
+                    {PLAN_LABELS[planTier]}
+                  </span>
+                )}
+              </div>
+              <h1 className="mt-1 text-xl font-bold text-white">
+                Welcome back, {profile.display_name ?? "Scout"}.
+              </h1>
+              <p className="mt-0.5 text-sm text-gray-400">
+                Sync events and keep scouting data flowing for the next match.
               </p>
               <UsageLimitMeter
                 limit={currentPlanAiLimit}
@@ -199,209 +193,175 @@ export default async function DashboardPage() {
                 resetAt={aiUsage.resetAt}
               />
             </div>
-          </StaggerChild>
-
-          <StaggerChild className="flex">
-            <div className="grid flex-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              {[
-                {
-                  label: t("dashboard.eventsSynced"),
-                  value: eventsCount,
-                  sub: t("dashboard.eventsSub"),
-                },
-                {
-                  label: t("dashboard.teamMembers"),
-                  value: memberCount ?? 0,
-                  sub: t("dashboard.membersSub"),
-                },
-                {
-                  label: t("dashboard.scoutingEntries"),
-                  value: scoutingCount ?? 0,
-                  sub: t("dashboard.entriesSub"),
-                },
-              ].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="flex items-center rounded-2xl dashboard-panel dashboard-card p-4"
-                >
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-                      {stat.label}
-                    </p>
-                    <p className="mt-0.5 text-2xl font-bold text-white">
-                      {stat.value}
-                    </p>
-                    <p className="text-xs text-gray-400">{stat.sub}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </StaggerChild>
-        </StaggerGroup>
-
-        {/* ─── Quick Actions ─── */}
-        <AnimateIn delay={0.2} className="mb-8 grid gap-4 md:grid-cols-2">
-          <div data-tour="quick-sync" className="rounded-2xl dashboard-panel dashboard-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/10 text-teal-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-white">{t("dashboard.quickSync")}</h3>
-                <p className="text-sm text-gray-400">
-                  {t("dashboard.quickSyncDesc")}
-                </p>
-              </div>
-            </div>
-            <div className="mt-4">
-              {profile.role === "captain" ? (
-                <SyncEventForm />
-              ) : (
-                <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-400">
-                  {t("dashboard.onlyCaptains")}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="rounded-2xl dashboard-panel dashboard-card p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/5 text-gray-300">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-white">
-                  {t("dashboard.teamSettings")}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  {t("dashboard.teamSettingsDesc")}
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Link
-                href="/dashboard/settings"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:border-white/20"
-              >
-                {t("dashboard.openSettings")}
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </Link>
-              <LeaveTeamButton />
-            </div>
-            {hasSupporterPlanAccess ? (
-              <div className="mt-3 rounded-xl border border-white/10 px-3 py-3 text-xs text-gray-400 dashboard-panel">
-                <p className="font-semibold text-gray-300">
-                  {isGiftedSupporter ? t("plan.gifted") : t("plan.supporter")}
-                </p>
-                <p className="mt-1">
-                  {isGiftedSupporter
-                    ? t("plan.giftedDesc")
-                    : t("plan.supporterDesc")}
-                </p>
-              </div>
-            ) : profile.role === "captain" ? (
-              <div className="mt-3 rounded-xl border border-white/10 px-3 py-3 text-xs text-gray-400 dashboard-panel">
-                <p className="font-semibold text-gray-300">{t("dashboard.upgradeSupporter")}</p>
-                <p className="mt-1">
-                  {t("dashboard.upgradeDesc")}
-                </p>
-                <div className="mt-3">
-                  <UpgradeSupporterButton />
-                </div>
-              </div>
-            ) : null}
           </div>
         </AnimateIn>
 
-        {/* ─── Scouting Reports ─── */}
-        <AnimateIn delay={0.3} className="mb-10 space-y-4">
-          <div data-tour="scouting-reports" className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10 text-teal-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        {/* ── Pinned Event Hero ── */}
+        <AnimateIn delay={0} className="mb-6">
+          {pinnedEvent ? (
+            <PinnedEventHero
+              event={{
+                tba_key: pinnedEvent.tba_key ?? "",
+                name: pinnedEvent.name ?? "",
+                location: pinnedEvent.location ?? null,
+                start_date: pinnedEvent.start_date ?? null,
+                end_date: pinnedEvent.end_date ?? null,
+                year: pinnedEvent.year ?? null,
+              }}
+              isAttending={pinnedOrgEvent?.is_attending ?? false}
+              status={eventStatus}
+            />
+          ) : (
+            <Link
+              href="/dashboard/events"
+              className="group flex items-center justify-between gap-4 rounded-2xl border border-dashed border-white/[0.08] bg-white/[0.015] p-6 transition hover:border-teal-500/25 hover:bg-teal-500/[0.03]"
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 text-gray-500 transition group-hover:bg-teal-500/10 group-hover:text-teal-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" x2="12" y1="17" y2="22" />
+                    <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-300 transition group-hover:text-white">
+                    No event pinned
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Go to Events, sync a competition, and pin it to see it here.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">
-                  {t("dashboard.scoutingReports")}
-                </h3>
-                <p className="text-sm text-gray-400">
-                  {t("dashboard.latestEntries")}
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-600 transition group-hover:text-teal-400">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </Link>
+          )}
+        </AnimateIn>
+
+        {/* ── Stats row ── */}
+        <StaggerGroup className="mb-8 grid grid-cols-3 gap-3">
+          {[
+            {
+              label: t("dashboard.eventsSynced"),
+              value: eventsCount,
+              weekDelta: null,
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+              ),
+            },
+            {
+              label: t("dashboard.teamMembers"),
+              value: memberCount ?? 0,
+              weekDelta: null,
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              ),
+            },
+            {
+              label: t("dashboard.scoutingEntries"),
+              value: scoutingCount ?? 0,
+              weekDelta: scoutingWeekCount ?? 0,
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                </svg>
+              ),
+            },
+          ].map((stat) => (
+            <StaggerChild
+              key={stat.label}
+              className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition hover:border-white/10"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-600">{stat.icon}</span>
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-500">
+                  {stat.label}
                 </p>
               </div>
+              <p className="mt-1.5 text-2xl font-bold text-white">{stat.value}</p>
+              {stat.weekDelta != null && stat.weekDelta > 0 && (
+                <div className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-emerald-400/60">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                    <polyline points="17 6 23 6 23 12" />
+                  </svg>
+                  +{stat.weekDelta} this week
+                </div>
+              )}
+            </StaggerChild>
+          ))}
+        </StaggerGroup>
+
+        {/* ── Scouting Reports ── */}
+        <AnimateIn delay={0.2} className="space-y-4">
+          <div data-tour="scouting-reports" className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-white">{t("dashboard.scoutingReports")}</h3>
+              <p className="text-xs text-gray-400">{t("dashboard.latestEntries")}</p>
             </div>
             <Link
               href="/dashboard/reports"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:border-white/20"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:border-white/20 hover:bg-white/5"
             >
               {t("dashboard.viewAll")}
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </Link>
           </div>
 
           {reportPreview && reportPreview.length > 0 ? (
-            <div className="flex gap-4 overflow-x-auto pt-1 pb-2 -mx-1 px-1">
+            <div className="flex gap-4 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
               {reportPreview.map((report) => {
-                const match = Array.isArray(report.matches)
-                  ? report.matches[0]
-                  : report.matches;
-                const event = match
-                  ? Array.isArray(match.events)
-                    ? match.events[0]
-                    : match.events
-                  : null;
-                const eventTitle = event?.year
-                  ? `${event.year} ${event.name}`
-                  : event?.name ?? "Event";
-                const reportProfile = Array.isArray(report.profiles)
-                  ? report.profiles[0]
-                  : report.profiles;
+                const match = Array.isArray(report.matches) ? report.matches[0] : report.matches;
+                const event = match ? (Array.isArray(match.events) ? match.events[0] : match.events) : null;
+                const eventTitle = event?.year ? `${event.year} ${event.name}` : event?.name ?? "Event";
+                const reportProfile = Array.isArray(report.profiles) ? report.profiles[0] : report.profiles;
                 const scouterName = reportProfile?.display_name ?? "Teammate";
                 const matchLabel =
                   match?.comp_level && match?.match_number
-                    ? compLabel(
-                        match.comp_level,
-                        match.match_number,
-                        match.set_number
-                      )
+                    ? compLabel(match.comp_level, match.match_number, match.set_number)
                     : "Match";
 
                 return (
                   <div
                     key={report.id}
-                    className="report-preview-card min-w-[260px] max-w-[280px] flex-1 rounded-2xl dashboard-panel dashboard-card p-4"
+                    className="min-w-[260px] max-w-[280px] flex-shrink-0 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition hover:border-white/10"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-medium text-slate-400">
-                          {eventTitle}
-                        </p>
-                        <h4 className="text-base font-semibold text-white">
-                          Team {report.team_number}
-                        </h4>
-                        <p className="text-xs text-gray-400">
-                          {matchLabel} &middot; {formatDate(report.created_at)}
-                        </p>
-                      </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-medium text-gray-500">{eventTitle}</p>
+                      <h4 className="text-base font-semibold text-white">Team {report.team_number}</h4>
+                      <p className="text-xs text-gray-500">
+                        {matchLabel} · {formatDate(report.created_at)}
+                      </p>
                     </div>
-
-                    <p className="mt-2 text-xs text-gray-400">
+                    <p className="mt-2 text-xs text-gray-500">
                       {t("dashboard.scoutedBy", { name: scouterName })}
                     </p>
-
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Link
                         href={`/scout/${report.match_id}/${report.team_number}`}
-                        className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-teal-300 dashboard-chip dashboard-chip-action"
+                        className="flex items-center gap-1 rounded-full border border-teal-500/20 bg-teal-500/10 px-2.5 py-1 text-xs font-semibold text-teal-300 transition hover:bg-teal-500/15"
                       >
                         {t("dashboard.review")}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
                       </Link>
                       {event?.tba_key && (
                         <Link
                           href={`/dashboard/events/${event.tba_key}`}
-                          className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-gray-300 dashboard-chip dashboard-chip-action"
+                          className="flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-gray-400 transition hover:border-white/20 hover:text-gray-200"
                         >
                           {t("dashboard.event")}
-                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="9 18 15 12 9 6" />
+                          </svg>
                         </Link>
                       )}
                     </div>
@@ -410,58 +370,64 @@ export default async function DashboardPage() {
               })}
             </div>
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 dashboard-panel p-8 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
               </div>
               <p className="text-sm font-medium text-gray-300">{t("dashboard.noReports")}</p>
-              <p className="mt-1 text-xs text-gray-400">
-                {t("dashboard.noReportsSub")}
-              </p>
+              <p className="mt-1 text-xs text-gray-500">{t("dashboard.noReportsSub")}</p>
             </div>
           )}
         </AnimateIn>
 
-        {/* ─── Events List ─── */}
-        <AnimateIn delay={0.4} className="space-y-4">
-          <div data-tour="events-list" className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-500/10 text-teal-400">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <h3 className="text-lg font-semibold text-white">{t("dashboard.yourEvents")}</h3>
-          </div>
-
-          {!orgEvents || orgEvents.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-white/10 dashboard-panel p-8 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        {/* ── Scouting Leaderboard ── */}
+        {leaderboard.length > 0 && (
+          <AnimateIn delay={0.35} className="mt-8">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+              <div className="flex items-center justify-between border-b border-white/[0.05] px-5 py-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Scout Leaderboard</h3>
+                  <p className="text-xs text-gray-400">Total entries submitted this season</p>
+                </div>
               </div>
-              <p className="text-sm font-medium text-gray-300">
-                {t("dashboard.noEvents")}
-              </p>
-              <p className="mt-1 text-xs text-gray-400">
-                {t("dashboard.noEventsSub")}
-              </p>
+              <div className="divide-y divide-white/[0.04]">
+                {leaderboard.map((scout, i) => (
+                  <div
+                    key={scout.name}
+                    className="flex items-center gap-4 px-5 py-3 transition hover:bg-white/[0.02]"
+                  >
+                    <span className={`w-5 text-center text-xs font-bold tabular-nums ${
+                      i === 0 ? "text-amber-400" : i === 1 ? "text-gray-300" : i === 2 ? "text-orange-400" : "text-gray-600"
+                    }`}>
+                      {i + 1}
+                    </span>
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[11px] font-bold text-gray-300">
+                      {scout.name.charAt(0).toUpperCase()}
+                    </div>
+                    <p className="flex-1 text-sm font-medium text-white">{scout.name}</p>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-1 rounded-full bg-teal-400/30"
+                        style={{ width: `${Math.round((scout.count / leaderboard[0].count) * 64)}px` }}
+                      >
+                        <div
+                          className="h-full rounded-full bg-teal-400"
+                          style={{ width: "100%" }}
+                        />
+                      </div>
+                      <span className="w-8 text-right text-xs font-bold tabular-nums text-teal-400">
+                        {scout.count}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <SortableEvents
-              orgEvents={orgEvents.map((oe) => ({
-                id: oe.id,
-                is_attending: oe.is_attending,
-                events: oe.events ? {
-                  id: oe.events.id,
-                  tba_key: oe.events.tba_key,
-                  name: oe.events.name,
-                  location: oe.events.location,
-                  start_date: oe.events.start_date,
-                  end_date: oe.events.end_date,
-                  year: oe.events.year,
-                } : null,
-              }))}
-              isCaptain={profile.role === "captain"}
-            />
-          )}
-        </AnimateIn>
+          </AnimateIn>
+        )}
 
       </main>
     </div>

@@ -52,3 +52,4 @@ scripts/data/
 .claude/run-dev.sh
 .claude/start.sh
 *.md
+.claude/worktrees/unruffled-cray/

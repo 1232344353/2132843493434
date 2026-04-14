@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Navbar } from "@/components/navbar";
 import { TeamAIBriefButton } from "./team-ai-brief-button";
 import { PitScoutButton } from "./pit-scout-button";
 import { TeamDetailCharts } from "./team-detail-charts";
@@ -290,16 +289,15 @@ export default async function TeamDetailPage({
 
   return (
     <div className="min-h-screen dashboard-page">
-      <Navbar />
       <RealtimeScoutingSection
         orgId={profile.org_id}
         matchIds={matchIds}
         initialEntryIds={entries.map((e) => e.id)}
       >
-      <main className="mx-auto max-w-4xl px-4 pb-12 pt-32 space-y-6">
+      <main className="mx-auto max-w-4xl px-6 pb-12 pt-10 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-blue-400">
+            <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
               {eventTitle}
             </p>
             <h1 className="text-lg font-bold">
@@ -333,8 +331,9 @@ export default async function TeamDetailPage({
             />
             <Link
               href={`/dashboard/events/${eventKey}`}
-              className="back-button"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-white/20 hover:text-white"
             >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
               Back
             </Link>
           </div>
@@ -518,30 +517,30 @@ export default async function TeamDetailPage({
             <div className="space-y-4">
               {/* Score averages */}
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div className="rounded-2xl bg-blue-500/10 p-3 text-center">
-                  <p className="text-xs text-blue-200">Avg Auto</p>
-                  <p className="text-xl font-bold text-blue-100">
+                <div className="rounded-2xl bg-teal-500/10 p-3 text-center">
+                  <p className="text-xs text-teal-300">Avg Auto</p>
+                  <p className="text-xl font-bold text-teal-100">
                     {aggregated.avgAuto.toFixed(1)}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-blue-500/10 p-3 text-center">
-                  <p className="text-xs text-blue-200">Avg Teleop</p>
-                  <p className="text-xl font-bold text-blue-100">
+                <div className="rounded-2xl bg-teal-500/10 p-3 text-center">
+                  <p className="text-xs text-teal-300">Avg Teleop</p>
+                  <p className="text-xl font-bold text-teal-100">
                     {aggregated.avgTeleop.toFixed(1)}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-blue-500/10 p-3 text-center">
-                  <p className="text-xs text-blue-200">Avg Endgame</p>
-                  <p className="text-xl font-bold text-blue-100">
+                <div className="rounded-2xl bg-teal-500/10 p-3 text-center">
+                  <p className="text-xs text-teal-300">Avg Endgame</p>
+                  <p className="text-xl font-bold text-teal-100">
                     {aggregated.avgEndgame.toFixed(1)}
                   </p>
                 </div>
-                <div className="rounded-2xl bg-blue-500/10 p-3 text-center">
-                  <p className="text-xs text-blue-200">Avg Total</p>
-                  <p className="text-xl font-bold text-blue-100">
+                <div className="rounded-2xl bg-teal-500/10 p-3 text-center">
+                  <p className="text-xs text-teal-300">Avg Total</p>
+                  <p className="text-xl font-bold text-teal-100">
                     {aggregated.avgTotal.toFixed(1)}
                   </p>
-                  <p className="text-xs text-blue-300">
+                  <p className="text-xs text-teal-400">
                     {aggregated.minTotal}–{aggregated.maxTotal}
                   </p>
                 </div>

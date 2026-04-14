@@ -1,63 +1,88 @@
+import { Skeleton } from "@/components/ui/skeleton";
+
 export default function TeamDetailLoading() {
   return (
     <div className="min-h-screen dashboard-page">
-      <div className="mx-auto max-w-4xl px-4 pt-32">
-        <div className="h-3 w-40 animate-pulse rounded bg-white/10" />
-        <div className="mt-2 h-6 w-64 animate-pulse rounded bg-white/15" />
-        <div className="mt-1 h-3 w-28 animate-pulse rounded bg-white/5" />
+      <div className="mx-auto max-w-4xl px-4 pt-32 space-y-2">
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="h-7 w-56" />
+        <Skeleton className="h-3 w-28 mt-1" />
       </div>
 
       <main className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-        {/* EPA Stats skeleton */}
-        <div className="rounded-2xl dashboard-panel p-6">
-          <div className="h-5 w-32 animate-pulse rounded bg-white/10" />
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="rounded-2xl bg-white/5 p-3 text-center">
-                <div className="mx-auto h-3 w-12 animate-pulse rounded bg-white/10" />
-                <div className="mx-auto mt-2 h-7 w-14 animate-pulse rounded bg-white/15" />
+        {/* EPA stats */}
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-5 w-20 rounded-full" />
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-white/[0.05] bg-white/[0.02] p-3 text-center space-y-2"
+              >
+                <Skeleton className="mx-auto h-2.5 w-14" />
+                <Skeleton className="mx-auto h-7 w-12" />
+                <Skeleton className="mx-auto h-2 w-10 rounded-full" />
               </div>
             ))}
           </div>
         </div>
 
-        {/* Scouting Summary skeleton */}
-        <div className="rounded-2xl dashboard-panel p-6">
-          <div className="h-5 w-40 animate-pulse rounded bg-white/10" />
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="rounded-2xl bg-blue-500/10 p-3 text-center">
-                <div className="mx-auto h-3 w-14 animate-pulse rounded bg-white/10" />
-                <div className="mx-auto mt-2 h-6 w-10 animate-pulse rounded bg-white/15" />
+        {/* Scouting summary */}
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-4">
+          <Skeleton className="h-4 w-36" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="rounded-xl border border-white/[0.05] p-3 text-center space-y-2"
+                style={{ background: "rgba(59,130,246,0.05)" }}
+              >
+                <Skeleton className="mx-auto h-2.5 w-16" />
+                <Skeleton className="mx-auto h-6 w-10" />
               </div>
             ))}
           </div>
         </div>
 
-        {/* Charts skeleton */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="rounded-2xl dashboard-panel p-6">
-              <div className="h-5 w-36 animate-pulse rounded bg-white/10" />
-              <div className="mt-4 h-[280px] animate-pulse rounded-xl bg-white/5" />
+        {/* Charts */}
+        <div className="grid gap-5 lg:grid-cols-2">
+          {[0, 1].map((i) => (
+            <div
+              key={i}
+              className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-6 w-16 rounded-lg" />
+              </div>
+              <Skeleton className="h-[260px] w-full rounded-xl" />
             </div>
           ))}
         </div>
 
-        {/* Match History skeleton */}
-        <div className="rounded-2xl dashboard-panel p-6">
-          <div className="h-5 w-44 animate-pulse rounded bg-white/10" />
-          <div className="mt-4 space-y-2">
-            {Array.from({ length: 4 }).map((_, i) => (
+        {/* Match history */}
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/[0.05] space-y-1.5">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-2.5 w-44" />
+          </div>
+          <div className="divide-y divide-white/[0.04]">
+            {[0, 1, 2, 3, 4].map((i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded-2xl border border-white/10 bg-gray-950/60 p-3"
+                className="flex items-center justify-between px-5 py-3"
               >
                 <div className="flex items-center gap-3">
-                  <div className="h-4 w-16 animate-pulse rounded bg-white/10" />
-                  <div className="h-5 w-10 animate-pulse rounded bg-white/10" />
+                  <Skeleton className="h-3.5 w-16" />
+                  <Skeleton className="h-5 w-10 rounded-full" />
                 </div>
-                <div className="h-4 w-14 animate-pulse rounded bg-white/10" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-7 w-14 rounded-lg" />
+                </div>
               </div>
             ))}
           </div>

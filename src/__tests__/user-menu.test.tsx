@@ -10,6 +10,12 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    refresh: vi.fn(),
+  }),
+}));
+
 // Mock signOut server action
 vi.mock("@/lib/auth-actions", () => ({
   signOut: vi.fn(),
@@ -22,6 +28,30 @@ function renderMenu(props?: Partial<{ name: string; email: string; isStaff: bool
         name={props?.name ?? "Jamie Chen"}
         email={props?.email ?? "jamie@team.org"}
         isStaff={props?.isStaff ?? false}
+        expanded={false}
+      />
+    </I18nProvider>
+  );
+}
+
+function renderExpandedMenu(
+  props?: Partial<{
+    name: string;
+    email: string;
+    isStaff: boolean;
+    role: string;
+    planTier: "free" | "supporter" | "gifted_supporter";
+  }>
+) {
+  return render(
+    <I18nProvider>
+      <UserMenu
+        name={props?.name ?? "Jamie Chen"}
+        email={props?.email ?? "jamie@team.org"}
+        isStaff={props?.isStaff ?? false}
+        expanded
+        role={props?.role ?? "Captain"}
+        planTier={props?.planTier ?? "supporter"}
       />
     </I18nProvider>
   );
@@ -33,14 +63,14 @@ describe("UserMenu", () => {
     document.documentElement.lang = "en";
   });
 
-  it("renders user initials", () => {
+  it("renders an avatar for the user name", () => {
     renderMenu({ name: "Jamie Chen" });
-    expect(screen.getByText("JC")).toBeInTheDocument();
+    expect(screen.getByRole("img")).toBeInTheDocument();
   });
 
-  it("renders single initial from email when no name", () => {
+  it("renders an avatar when falling back to email", () => {
     renderMenu({ name: "", email: "jamie@team.org" });
-    expect(screen.getByText("J")).toBeInTheDocument();
+    expect(screen.getByRole("img")).toBeInTheDocument();
   });
 
   it("opens menu on click", () => {
@@ -107,5 +137,18 @@ describe("UserMenu", () => {
     });
     expect(screen.getByText("Jamie Chen")).toBeInTheDocument();
     expect(screen.getByText("jamie@team.org")).toBeInTheDocument();
+  });
+
+  it("renders plan tier in the expanded sidebar trigger and header", () => {
+    renderExpandedMenu({ planTier: "gifted_supporter" });
+
+    expect(screen.getByText("Gifted Supporter")).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: /open account menu/i }));
+    });
+
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    expect(screen.getAllByText("Gifted Supporter").length).toBeGreaterThan(0);
   });
 });

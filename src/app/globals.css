@@ -149,6 +149,33 @@ a[aria-disabled="true"] {
   display: none;
 }
 
+/* ── Skeleton shimmer (directional sweep, replaces pulse) ── */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+
+.skeleton-shimmer {
+  background-color: rgba(255, 255, 255, 0.04);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.075) 50%,
+    transparent 100%
+  );
+  background-size: 800px 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+    background-image: none;
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+}
+
 /* Toast animations */
 @keyframes slide-in-from-right {
   from {
@@ -244,10 +271,6 @@ a[aria-disabled="true"] {
   overflow-x: clip;
 }
 
-.dashboard-shell nav {
-  background: color-mix(in srgb, var(--dash-bg) 70%, transparent);
-  border-color: var(--dash-border);
-}
 
 .dashboard-panel {
   background: var(--dash-surface);

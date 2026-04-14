@@ -70,7 +70,12 @@ export function SyncStatsButton({
         setJobId(null);
         const synced = job.result?.synced ?? 0;
         const total = job.result?.total ?? 0;
-        setStatus(`Synced EPA for ${synced}/${total} teams.`);
+        const msg = `Synced EPA for ${synced}/${total} teams.`;
+        setStatus(msg);
+        if (compact) {
+          toast(msg, "success");
+          setStatus(null);
+        }
         return;
       }
 
@@ -80,18 +85,28 @@ export function SyncStatsButton({
     };
 
     void pollJobStatus().catch((pollError) => {
-      setError(pollError instanceof Error ? pollError.message : "Sync failed");
+      const msg = pollError instanceof Error ? pollError.message : "Sync failed";
+      setError(msg);
       setLoading(false);
       setJobId(null);
       setStatus(null);
+      if (compact) {
+        toast(msg, "error");
+        setError(null);
+      }
     });
 
     pollRef.current = setInterval(() => {
       void pollJobStatus().catch((pollError) => {
-        setError(pollError instanceof Error ? pollError.message : "Sync failed");
+        const msg = pollError instanceof Error ? pollError.message : "Sync failed";
+        setError(msg);
         setLoading(false);
         setJobId(null);
         setStatus(null);
+        if (compact) {
+          toast(msg, "error");
+          setError(null);
+        }
       });
     }, 1500);
 
@@ -101,7 +116,7 @@ export function SyncStatsButton({
         pollRef.current = null;
       }
     };
-  }, [jobId, loading]);
+  }, [jobId, loading, compact, toast]);
 
   async function handleSync() {
     setLoading(true);
@@ -137,34 +152,137 @@ export function SyncStatsButton({
       setProgress(Math.max(4, Math.min(100, data.job.progress ?? 4)));
       setStatus(data.job.statusMessage || "Sync job started...");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Sync failed");
+      const msg = err instanceof Error ? err.message : "Sync failed";
+      setError(msg);
       setStatus(null);
       setLoading(false);
       setJobId(null);
       setProgress(0);
+      if (compact) {
+        toast(msg, "error");
+        setError(null);
+      }
     }
   }
 
-  return (
-    <div className={compact ? "space-y-2" : "mt-4 space-y-2"}>
+  /* ── Compact (nav-strip) variant ── */
+  if (compact) {
+    return (
       <button
         type="button"
         onClick={handleSync}
         disabled={loading}
-        className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:opacity-50 dark:bg-blue-600 dark:hover:bg-blue-500"
+        title={loading ? (status ?? "Syncing EPA...") : "Sync EPA stats"}
+        className={`relative flex items-center gap-1.5 overflow-hidden rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+          loading
+            ? "cursor-default text-teal-400 bg-teal-500/10"
+            : "text-gray-400 hover:bg-white/5 hover:text-gray-200"
+        }`}
       >
+        {/* Progress bar along the bottom of the button */}
+        {loading && (
+          <span
+            className="pointer-events-none absolute bottom-0 left-0 h-[2px] rounded-full bg-teal-400/60 transition-all duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        )}
+
+        {/* Icon */}
+        {loading ? (
+          <svg
+            className="animate-spin shrink-0"
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="shrink-0"
+          >
+            <path d="M21 2v6h-6" />
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+            <path d="M3 22v-6h6" />
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+          </svg>
+        )}
+
+        <span>{loading ? "Syncing..." : "Sync EPA"}</span>
+      </button>
+    );
+  }
+
+  /* ── Full (standalone) variant ── */
+  return (
+    <div className="mt-4 space-y-2">
+      <button
+        type="button"
+        onClick={handleSync}
+        disabled={loading}
+        className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm font-semibold text-gray-200 shadow-sm transition hover:border-teal-500/30 hover:bg-teal-500/5 hover:text-teal-300 disabled:opacity-50"
+      >
+        {loading ? (
+          <svg
+            className="animate-spin"
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        ) : (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M21 2v6h-6" />
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+            <path d="M3 22v-6h6" />
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+          </svg>
+        )}
         {loading ? "Syncing..." : "Sync stats"}
       </button>
+
       {(loading || progress > 0) && (
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-blue-500 transition-all duration-300 ease-out"
+            className="h-full rounded-full bg-teal-500 transition-all duration-300 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
       )}
-      {status && <p className="text-xs text-emerald-600 dark:text-emerald-300">{status}</p>}
-      {error && <p className="text-xs text-red-600 dark:text-red-300">{error}</p>}
+      {status && <p className="text-xs text-emerald-400">{status}</p>}
+      {error && <p className="text-xs text-red-400">{error}</p>}
     </div>
   );
 }

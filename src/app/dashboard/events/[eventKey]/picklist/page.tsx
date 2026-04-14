@@ -3,7 +3,6 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { PickListContent } from "@/types/strategy";
 import { GeneratePickListButton } from "./generate-button";
-import { Navbar } from "@/components/navbar";
 import { ChatSidebarTrigger } from "@/components/chat-sidebar";
 import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 import { PickListLoadingProvider, PickListContentArea } from "./picklist-content";
@@ -89,12 +88,11 @@ export default async function PickListPage({
 
   return (
     <div className="min-h-screen dashboard-page">
-      <Navbar />
-      <main className="mx-auto max-w-6xl px-4 pb-12 pt-32 space-y-6">
+      <main className="mx-auto max-w-6xl px-6 pb-12 pt-10 space-y-6">
         <PickListLoadingProvider>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-blue-400">
+            <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
               {eventTitle}
             </p>
             <h1 className="text-2xl font-bold text-white">Alliance Pick List</h1>
@@ -106,7 +104,11 @@ export default async function PickListPage({
             {!content && (
               <GeneratePickListButton eventId={event.id} showDataHint={false} formConfig={scoutingFormConfig} />
             )}
-            <Link href={`/dashboard/events/${eventKey}`} className="back-button">
+            <Link
+              href={`/dashboard/events/${eventKey}`}
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-white/20 hover:text-white"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
               Back
             </Link>
           </div>
@@ -303,8 +305,8 @@ export default async function PickListPage({
             <aside className="space-y-6">
               <section className="rounded-2xl dashboard-panel p-6">
                 <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/20">
-                    <svg className="h-5 w-5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-500/20">
+                    <svg className="h-5 w-5 text-teal-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
                     </svg>
                   </span>
@@ -323,7 +325,7 @@ export default async function PickListPage({
                     eventName={event.name}
                     userName={profile?.display_name ?? null}
                     label="Open Strategy Chat"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-medium text-blue-300 transition hover:bg-blue-500/20 hover:border-blue-500/40"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-teal-500/30 bg-teal-500/10 px-4 py-3 text-sm font-medium text-teal-300 transition hover:bg-teal-500/20 hover:border-teal-500/40"
                   />
                 </div>
               </section>

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Navbar } from "@/components/navbar";
 import { TeamSettingsForm } from "./settings-form";
 import { getOrgBillingOverview } from "@/lib/stripe";
 
@@ -51,9 +50,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="min-h-screen dashboard-page">
-      <Navbar />
-
-      <main className="mx-auto max-w-4xl px-4 pb-12 pt-32">
+      <main className="mx-auto max-w-4xl px-6 pb-12 pt-10">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
@@ -72,7 +69,11 @@ export default async function SettingsPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Account
             </Link>
-            <Link href="/dashboard" className="back-button">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-white/20 hover:text-white"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
               Back
             </Link>
           </div>

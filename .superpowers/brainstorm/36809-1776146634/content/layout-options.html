@@ -1,0 +1,97 @@
+<h2>How should the Scouting Overview be organized?</h2>
+<p class="subtitle">Choose the layout that best fits how captains and scouts will use this page</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #0f172a; border-radius: 8px; font-size: 12px;">
+      <div style="background:#1e293b;border-radius:6px;padding:10px;margin-bottom:8px;">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">AI Event Summary</div>
+        <div style="height:36px;background:#0ea5e920;border:1px solid #0ea5e940;border-radius:4px;display:flex;align-items:center;padding:0 8px;color:#7dd3fc;font-size:11px;">Generating overview of 24 teams, 87 entries...</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
+        <div style="background:#1e293b;border-radius:4px;padding:8px;">
+          <div style="color:#38bdf8;font-size:11px;font-weight:600;">Team 254</div>
+          <div style="color:#64748b;font-size:10px;">6 match entries</div>
+          <div style="color:#64748b;font-size:10px;">Pit scouted</div>
+        </div>
+        <div style="background:#1e293b;border-radius:4px;padding:8px;">
+          <div style="color:#38bdf8;font-size:11px;font-weight:600;">Team 1114</div>
+          <div style="color:#64748b;font-size:10px;">5 match entries</div>
+          <div style="color:#64748b;font-size:10px;">Pit scouted</div>
+        </div>
+        <div style="background:#1e293b;border-radius:4px;padding:8px;">
+          <div style="color:#38bdf8;font-size:11px;font-weight:600;">Team 2056</div>
+          <div style="color:#64748b;font-size:10px;">4 match entries</div>
+          <div style="color:#64748b;font-size:10px;">No pit scout</div>
+        </div>
+      </div>
+      <div style="color:#64748b;font-size:10px;text-align:center;margin-top:6px;">Click a team card to expand entries + get AI summary</div>
+    </div>
+    <div class="card-body">
+      <h3>A — Team-First Grid</h3>
+      <p>Event AI summary at top, then a grid of team cards. Click any card to expand and see that team's individual match entries, pit data, and an on-demand AI summary.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #0f172a; border-radius: 8px; font-size: 12px;">
+      <div style="background:#1e293b;border-radius:6px;padding:10px;margin-bottom:8px;">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">AI Event Summary</div>
+        <div style="height:36px;background:#0ea5e920;border:1px solid #0ea5e940;border-radius:4px;display:flex;align-items:center;padding:0 8px;color:#7dd3fc;font-size:11px;">Top performers: 254, 1114... 3 teams need more data</div>
+      </div>
+      <div style="display:grid;grid-template-columns:200px 1fr;gap:6px;height:100px;">
+        <div style="background:#1e293b;border-radius:4px;padding:8px;overflow:hidden;">
+          <div style="color:#38bdf8;font-size:10px;font-weight:600;margin-bottom:4px;">Teams</div>
+          <div style="color:#e2e8f0;font-size:10px;padding:3px 6px;background:#0ea5e920;border-radius:3px;margin-bottom:3px;">Team 254 ●</div>
+          <div style="color:#94a3b8;font-size:10px;padding:3px 6px;border-radius:3px;margin-bottom:3px;">Team 1114</div>
+          <div style="color:#94a3b8;font-size:10px;padding:3px 6px;border-radius:3px;">Team 2056</div>
+        </div>
+        <div style="background:#1e293b;border-radius:4px;padding:8px;">
+          <div style="color:#38bdf8;font-size:10px;font-weight:600;margin-bottom:4px;">Team 254 — 6 entries</div>
+          <div style="color:#64748b;font-size:10px;margin-bottom:4px;">AI: Strong auto, consistent scorer...</div>
+          <div style="display:flex;gap:4px;">
+            <div style="background:#0f172a;border-radius:3px;padding:3px 6px;color:#7dd3fc;font-size:9px;">Qm3 · 28pts</div>
+            <div style="background:#0f172a;border-radius:3px;padding:3px 6px;color:#7dd3fc;font-size:9px;">Qm7 · 31pts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Master-Detail</h3>
+      <p>Event summary at top. Left panel lists all teams. Selecting a team shows their pit data, AI summary, and all match entries in a detail panel on the right.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding: 16px; background: #0f172a; border-radius: 8px; font-size: 12px;">
+      <div style="background:#1e293b;border-radius:6px;padding:10px;margin-bottom:8px;">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">AI Event Summary</div>
+        <div style="height:36px;background:#0ea5e920;border:1px solid #0ea5e940;border-radius:4px;display:flex;align-items:center;padding:0 8px;color:#7dd3fc;font-size:11px;">Top performers: 254, 1114... 3 teams need more data</div>
+      </div>
+      <div style="background:#1e293b;border-radius:4px;padding:8px;margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="color:#38bdf8;font-size:11px;font-weight:600;">Team 254</div>
+          <div style="color:#64748b;font-size:10px;">6 entries · pit scouted</div>
+        </div>
+        <div style="color:#94a3b8;font-size:10px;margin-bottom:6px;">AI: Dominant auto, fast cycle time, consistent endgame. Watch for defense vulnerabilities.</div>
+        <div style="display:flex;gap:4px;overflow:hidden;">
+          <div style="background:#0f172a;border-radius:3px;padding:3px 6px;color:#7dd3fc;font-size:9px;white-space:nowrap;">Qm3 · 28pts</div>
+          <div style="background:#0f172a;border-radius:3px;padding:3px 6px;color:#7dd3fc;font-size:9px;white-space:nowrap;">Qm7 · 31pts</div>
+          <div style="background:#0f172a;border-radius:3px;padding:3px 6px;color:#94a3b8;font-size:9px;white-space:nowrap;">+4 more</div>
+        </div>
+      </div>
+      <div style="background:#1e293b;border-radius:4px;padding:8px;opacity:0.6;">
+        <div style="color:#38bdf8;font-size:11px;font-weight:600;margin-bottom:4px;">Team 1114</div>
+        <div style="color:#94a3b8;font-size:10px;">5 entries · pit scouted</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Stacked Feed</h3>
+      <p>Event summary at top. Below, a scrollable list of team sections — each showing pit info, AI summary inline, and collapsible match entries. Browse all teams in one flow.</p>
+    </div>
+  </div>
+
+</div>
+
+<p class="subtitle" style="margin-top: 16px;">Click a card to select your preferred layout. Let me know in the terminal too.</p>
