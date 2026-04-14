@@ -182,6 +182,7 @@ async function runJob(row: SyncJobRow) {
     eventKey: row.event_key,
     orgId: row.org_id,
     orgTeamNumber: row.org_team_number,
+    syncedBy: row.requested_by,
   });
 
   await updateJob(row.id, {

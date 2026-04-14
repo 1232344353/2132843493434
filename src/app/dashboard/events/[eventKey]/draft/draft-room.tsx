@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/toast";
 import type { PickListContent } from "@/types/strategy";
 import { GeneratePickListButton } from "../picklist/generate-button";
 import type { ScoutingFormConfig } from "@/lib/platform-settings";
@@ -298,8 +299,8 @@ export function DraftRoom({
       ? coerceDraftState(existingSession.state, initialState)
       : initialState
   );
+  const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [poolSearch, setPoolSearch] = useState("");
   const [autoAdvance, setAutoAdvance] = useState(true);
   const [strictDeclines, setStrictDeclines] = useState(true);
@@ -321,7 +322,6 @@ export function DraftRoom({
       if (!storageEnabled) return;
       saveQueueRef.current = saveQueueRef.current.then(async () => {
         setSaving(true);
-        setSaveError(null);
         try {
           if (!sessionId) {
             const { data, error } = await supabase
@@ -347,13 +347,13 @@ export function DraftRoom({
             if (error) throw error;
           }
         } catch (err) {
-          setSaveError(err instanceof Error ? err.message : "Failed to save");
+          toast(err instanceof Error ? err.message : "Failed to save draft.", "error");
         } finally {
           setSaving(false);
         }
       });
     },
-    [eventId, orgId, sessionId, storageEnabled, supabase]
+    [eventId, orgId, sessionId, storageEnabled, supabase, toast]
   );
 
   useEffect(() => {
@@ -592,7 +592,7 @@ export function DraftRoom({
     slotIndex: number
   ) {
     if (strictDeclines && payload.from === "declined") {
-      setSaveError("Strict mode blocks drafting declined teams.");
+      toast("Strict mode blocks drafting declined teams.", "error");
       return;
     }
     const next = { ...state };
@@ -779,7 +779,7 @@ export function DraftRoom({
       return;
     }
     if (!state.pool.includes(teamNumber)) {
-      setSaveError(`Team ${teamNumber} is no longer in the available pool.`);
+      toast(`Team ${teamNumber} is no longer in the available pool.`, "error");
       return;
     }
     applyMoveTeamToSlot(
@@ -815,22 +815,49 @@ export function DraftRoom({
               </div>
             ) : (
               <div className="flex items-center gap-3">
-                <div className="relative flex h-10 w-10 items-center justify-center">
+                <div className="relative flex h-10 w-10 items-center justify-center overflow-hidden">
                   <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 36 36">
-                    <circle cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/10" />
                     <circle
-                      cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="2.5"
+                      cx="18"
+                      cy="18"
+                      r="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="text-white/10"
+                    />
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="16"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
                       className="text-blue-400"
                       strokeDasharray={`${progressPercent} 100`}
                       strokeLinecap="round"
                     />
                   </svg>
-                  <span className="text-xs font-bold text-white">{currentAllianceIndex !== null ? currentAllianceIndex + 1 : ""}</span>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={currentAllianceIndex ?? "none"}
+                      initial={{ opacity: 0, y: 8, scale: 0.86 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 1.14 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      className="absolute text-xs font-bold text-white"
+                    >
+                      {currentAllianceIndex !== null ? currentAllianceIndex + 1 : ""}
+                    </motion.span>
+                  </AnimatePresence>
                 </div>
                 <div>
                   <p className="text-sm text-gray-400">
-                    Alliance <span className="font-semibold text-white">{currentAllianceIndex !== null ? currentAllianceIndex + 1 : ""}</span>
-                    {" "}up next, Round <span className="font-semibold text-white">{currentRound}</span>
+                    Alliance{" "}
+                    <span className="font-semibold text-white">
+                      {currentAllianceIndex !== null ? currentAllianceIndex + 1 : ""}
+                    </span>{" "}
+                    up next, Round <span className="font-semibold text-white">{currentRound}</span>
                   </p>
                   <p className="text-xs text-gray-500">
                     Pick {currentPickIndex + 1} of {totalPicks}, {state.pool.length} teams remaining
@@ -897,12 +924,11 @@ export function DraftRoom({
             <span className="text-teal-300">Local-only mode</span>
           )}
           {saving && (
-            <span className="flex items-center gap-1 text-blue-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
+            <span className="flex items-center gap-1 text-teal-300">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-400 animate-pulse" />
               Saving
             </span>
           )}
-          {saveError && <span className="text-red-300">{saveError}</span>}
         </div>
 
         {upcomingPicks.length > 0 && (
@@ -916,7 +942,7 @@ export function DraftRoom({
                   key={pick.pickIndex}
                   className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] ${
                     index === 0
-                      ? "border-blue-500/40 bg-blue-500/15 text-blue-200"
+                      ? "border-teal-500/40 bg-teal-500/15 text-teal-200"
                       : "border-white/10 bg-white/5 text-gray-300"
                   }`}
                 >
@@ -1000,7 +1026,7 @@ export function DraftRoom({
                     onClick={() => handleTeamTap({ teamNumber: team.teamNumber, from: "pool" })}
                     className={`group cursor-pointer rounded-xl border p-3 transition ${
                       selectedTeam?.teamNumber === team.teamNumber
-                        ? "border-blue-500/50 bg-blue-500/10"
+                        ? "border-teal-500/50 bg-teal-500/10"
                         : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.07]"
                     }`}
                   >
@@ -1054,7 +1080,7 @@ export function DraftRoom({
                               event.stopPropagation();
                               draftTeamToCurrentPick(team.teamNumber);
                             }}
-                            className="rounded-md border border-blue-500/40 bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-200 transition hover:bg-blue-500/20"
+                            className="rounded-md border border-teal-500/40 bg-teal-500/10 px-2 py-0.5 text-[10px] font-semibold text-teal-200 transition hover:bg-teal-500/20"
                           >
                             Pick Now
                           </button>
@@ -1078,11 +1104,11 @@ export function DraftRoom({
             onDragLeave={handlePoolDragLeave}
             onDrop={handlePoolDrop}
             className={`relative overflow-hidden rounded-2xl dashboard-panel p-4 transition ${
-              poolDragOver ? "ring-1 ring-blue-500/40 bg-blue-500/5" : ""
+              poolDragOver ? "ring-1 ring-teal-500/40 bg-teal-500/5" : ""
             }`}
           >
             {poolDragOver && (
-              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-blue-300/10" />
+              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-teal-300/10" />
             )}
             <div className="relative z-10 space-y-3">
               <div className="flex items-center justify-between">
@@ -1096,7 +1122,7 @@ export function DraftRoom({
                 value={poolSearch}
                 onChange={(e) => setPoolSearch(e.target.value)}
                 placeholder="Search teams..."
-                className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500/50 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-teal-500/50 focus:outline-none"
               />
 
               <div className="flex items-center gap-2">
@@ -1105,17 +1131,17 @@ export function DraftRoom({
                   onChange={(e) => setNewTeamInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addTeamToPool()}
                   placeholder="Add team #"
-                  className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500/50 focus:outline-none"
+                  className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-teal-500/50 focus:outline-none"
                 />
                 <button
                   onClick={addTeamToPool}
-                  className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition"
+                  className="shrink-0 rounded-lg bg-teal-600 px-3 py-2 text-xs font-semibold text-white hover:bg-teal-500 transition"
                 >
                   Add
                 </button>
               </div>
 
-              <p className={`text-[11px] ${poolDragOver ? "text-blue-200" : "text-gray-500"}`}>
+              <p className={`text-[11px] ${poolDragOver ? "text-teal-200" : "text-gray-500"}`}>
                 Drop anywhere in this box to return teams to the pool.
               </p>
 
@@ -1189,12 +1215,12 @@ export function DraftRoom({
                     return (
                       <tr
                         key={alliance.seed}
-                        className={isOnClock ? "bg-blue-500/5" : ""}
+                        className={isOnClock ? "bg-teal-500/5" : ""}
                       >
                         <td className="py-2 pl-2">
                           <span className={`inline-flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ${
                             isOnClock
-                              ? "bg-blue-500/20 text-blue-300"
+                              ? "bg-teal-500/20 text-teal-300"
                               : "bg-white/5 text-gray-500"
                           }`}>
                             {alliance.seed}
@@ -1258,7 +1284,7 @@ export function DraftRoom({
               </div>
 
               <p className={`text-[11px] ${declinedDragOver ? "text-red-200" : "text-red-300/60"}`}>
-                Drop anywhere in this box to decline a team.
+                Drop anywhere in this box if a team has declined an alliance.
               </p>
 
               <div data-lenis-prevent className="max-h-80 space-y-1 overflow-y-auto pr-1">
@@ -1288,12 +1314,13 @@ export function DraftRoom({
 
       <AnimatePresence>
         {selectedTeam && (
+          // Keep this selected-team popup blue unless product explicitly asks for a redesign.
           <motion.div
             initial={{ opacity: 0, y: 14, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.98 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
-            className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm rounded-lg bg-gradient-to-r from-sky-500 to-blue-400 px-4 py-3 text-sm font-medium text-white shadow-lg"
+            className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm rounded-xl border border-sky-400/35 bg-gradient-to-r from-blue-700/95 via-sky-700/95 to-cyan-700/95 px-4 py-3 text-sm font-medium text-white shadow-xl shadow-black/50 backdrop-blur-sm"
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-2">
@@ -1372,7 +1399,7 @@ function PoolTeamChip({
       onClick={() => onTap(payload)}
       className={`flex cursor-pointer items-center justify-between rounded-lg border px-2.5 py-1.5 text-xs transition ${
         isSelected
-          ? "border-blue-500/50 bg-blue-500/10"
+          ? "border-teal-500/50 bg-teal-500/10"
           : declined
           ? "border-red-500/20 bg-red-500/5 hover:border-red-500/30"
           : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/5"
@@ -1457,18 +1484,18 @@ function AllianceSlot({
       onClick={onTap}
       className={`relative overflow-hidden min-w-[110px] rounded-lg border px-2 py-1.5 text-xs transition ${
         dragOver
-          ? "border-blue-400/70 bg-blue-500/15 ring-1 ring-blue-500/30"
+          ? "border-teal-400/70 bg-teal-500/15 ring-1 ring-teal-500/30"
           : isOnClock
-          ? "border-blue-500/50 bg-blue-500/10 ring-1 ring-blue-500/30"
+          ? "border-teal-500/50 bg-teal-500/10 ring-1 ring-teal-500/30"
           : isSelected
-          ? "border-blue-500/40 bg-blue-500/10"
+          ? "border-teal-500/40 bg-teal-500/10"
           : teamNumber
           ? "border-white/10 bg-white/[0.03]"
           : "border-dashed border-white/10 bg-transparent"
       } ${teamNumber && payload ? "cursor-grab active:cursor-grabbing" : !teamNumber && !isCaptain ? "cursor-pointer" : ""}`}
     >
       {dragOver && (
-        <div className="pointer-events-none absolute inset-0 rounded-lg bg-blue-300/10" />
+        <div className="pointer-events-none absolute inset-0 rounded-lg bg-teal-300/10" />
       )}
       {teamNumber ? (
         <div
@@ -1483,7 +1510,7 @@ function AllianceSlot({
           )}
         </div>
       ) : (
-        <span className={`relative z-10 text-[10px] ${isOnClock ? "text-blue-400" : "text-gray-600"}`}>
+        <span className={`relative z-10 text-[10px] ${isOnClock ? "text-teal-400" : "text-gray-600"}`}>
           {isOnClock ? "Up next" : "—"}
         </span>
       )}

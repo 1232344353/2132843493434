@@ -73,8 +73,9 @@ export async function syncEventData(params: {
   eventKey: string;
   orgId: string;
   orgTeamNumber: number | null;
+  syncedBy?: string | null;
 }): Promise<EventSyncDataResult> {
-  const { supabase, eventKey, orgId, orgTeamNumber } = params;
+  const { supabase, eventKey, orgId, orgTeamNumber, syncedBy } = params;
 
   const maxAllowed = new Date();
   maxAllowed.setUTCFullYear(maxAllowed.getUTCFullYear() + 1);
@@ -171,12 +172,17 @@ export async function syncEventData(params: {
     ? tbaTeams.some((team) => team.team_number === orgTeamNumber)
     : false;
 
+  const orgEventRow: Record<string, unknown> = {
+    org_id: orgId,
+    event_id: dbEvent.id,
+    is_attending: isAttending,
+  };
+  if (syncedBy) {
+    orgEventRow.synced_by = syncedBy;
+  }
+
   const { error: orgEventError } = await supabase.from("org_events").upsert(
-    {
-      org_id: orgId,
-      event_id: dbEvent.id,
-      is_attending: isAttending,
-    },
+    orgEventRow,
     { onConflict: "org_id,event_id" }
   );
 

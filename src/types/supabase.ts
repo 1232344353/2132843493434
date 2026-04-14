@@ -334,6 +334,7 @@ export type Database = {
           event_id: string
           id: string
           is_attending: boolean
+          is_pinned: boolean
           org_id: string
         }
         Insert: {
@@ -341,6 +342,7 @@ export type Database = {
           event_id: string
           id?: string
           is_attending?: boolean
+          is_pinned?: boolean
           org_id: string
         }
         Update: {
@@ -348,6 +350,7 @@ export type Database = {
           event_id?: string
           id?: string
           is_attending?: boolean
+          is_pinned?: boolean
           org_id?: string
         }
         Relationships: [

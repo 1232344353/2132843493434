@@ -11,8 +11,9 @@ export function PageTransition({
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
   const isScoutRoute = pathname.startsWith("/scout/");
+  const isDashboardRoute = pathname.startsWith("/dashboard");
 
-  if (isScoutRoute) {
+  if (isScoutRoute || isDashboardRoute) {
     return (
       <div className="min-h-screen" style={{ backgroundColor: "var(--background)" }}>
         {children}

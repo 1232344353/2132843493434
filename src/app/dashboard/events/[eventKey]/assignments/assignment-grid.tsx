@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/toast";
 import type { Tables } from "@/types/supabase";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
@@ -37,11 +38,10 @@ export function AssignmentGrid({
   const router = useRouter();
   const supabase = createClient();
   const prefersReducedMotion = useReducedMotion();
+  const { toast } = useToast();
 
   const [filter, setFilter] = useState<"all" | "qm" | "playoff">("qm");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [page, setPage] = useState(1);
   const [pageDirection, setPageDirection] = useState<1 | -1>(1);
 
@@ -119,11 +119,13 @@ export function AssignmentGrid({
       }
       return { ...prev, [key]: scoutId };
     });
-    setSuccess(false);
   }
 
   function autoRotate() {
-    if (members.length === 0) return;
+    if (members.length === 0) {
+      toast("No members to assign.", "error");
+      return;
+    }
 
     const newMap: Record<string, string> = {};
     let scoutIndex = 0;
@@ -183,23 +185,19 @@ export function AssignmentGrid({
     }
 
     setAssignmentMap(newMap);
-    setSuccess(false);
   }
 
   function clearAll() {
     setAssignmentMap({});
-    setSuccess(false);
   }
 
   async function handleSave() {
     setSaving(true);
-    setError(null);
-    setSuccess(false);
 
     // Delete existing assignments for these matches
     const matchIds = filteredMatches.map((m) => m.id);
     if (matchIds.length === 0) {
-      setSuccess(true);
+      toast("Assignments saved.", "success");
       setSaving(false);
       return;
     }
@@ -211,7 +209,7 @@ export function AssignmentGrid({
       .in("match_id", matchIds);
 
     if (deleteError) {
-      setError(deleteError.message);
+      toast(deleteError.message, "error");
       setSaving(false);
       return;
     }
@@ -248,13 +246,13 @@ export function AssignmentGrid({
         .insert(rows);
 
       if (insertError) {
-        setError(insertError.message);
+        toast(insertError.message, "error");
         setSaving(false);
         return;
       }
     }
 
-    setSuccess(true);
+    toast(`Saved ${rows.length} assignment${rows.length !== 1 ? "s" : ""}.`, "success");
     setSaving(false);
     router.refresh();
   }
@@ -330,17 +328,6 @@ export function AssignmentGrid({
           {members.length} scouts
         </span>
       </div>
-
-      {error && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-200">
-          Assignments saved!
-        </div>
-      )}
 
       {/* Grid */}
       <AnimatePresence mode="wait" initial={false}>

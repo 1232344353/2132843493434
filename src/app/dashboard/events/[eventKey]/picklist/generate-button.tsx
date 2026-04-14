@@ -5,6 +5,14 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useToast } from "@/components/toast";
+
+const LOADING_PHRASES = [
+  "Analyzing scouting data",
+  "Computing EPA scores",
+  "Checking alliance synergy",
+  "Ranking available teams",
+  "Finalizing pick list",
+];
 import {
   formatRateLimitUsageMessage,
   readRateLimitSnapshot,
@@ -91,6 +99,7 @@ export function GeneratePickListButton({
   const [mounted, setMounted] = useState(false);
   const [teamProfile, setTeamProfile] = useState<TeamProfile>(defaultTeamProfile);
   const pickListLoading = usePickListLoading();
+  const [loadingPhase, setLoadingPhase] = useState(0);
   const storageKey = useMemo(
     () => `scoutai:picklist-team-profile:v1:${eventId}`,
     [eventId]
@@ -99,6 +108,17 @@ export function GeneratePickListButton({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      setLoadingPhase(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingPhase((prev) => (prev + 1) % LOADING_PHRASES.length);
+    }, 1800);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   // Build valid-key sets from config for filtering cached values
   const startPosSet = useMemo(
@@ -255,14 +275,33 @@ export function GeneratePickListButton({
         }
       >
         {loading ? (
-          <>
-            <span className="inline-flex items-center gap-1">
-              <span className="h-1 w-1 rounded-full bg-white/90 [animation:ping_1.05s_ease-in-out_infinite]" />
-              <span className="h-1 w-1 rounded-full bg-white/75 [animation:ping_1.05s_ease-in-out_120ms_infinite]" />
-              <span className="h-1 w-1 rounded-full bg-white/55 [animation:ping_1.05s_ease-in-out_240ms_infinite]" />
+          compact ? (
+            <>
+              <svg className="h-3 w-3 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Generating...
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-2.5">
+              <svg className="h-4 w-4 shrink-0 animate-spin text-white/70" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={loadingPhase}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                >
+                  {LOADING_PHRASES[loadingPhase]}...
+                </motion.span>
+              </AnimatePresence>
             </span>
-            {compact ? "Generating..." : "Generating best pick list"}
-          </>
+          )
         ) : (
           <>
             {compact && (
@@ -311,7 +350,7 @@ export function GeneratePickListButton({
                 <div className="pointer-events-none absolute inset-x-0 top-0 h-20 rounded-t-2xl bg-gradient-to-b from-indigo-300/15 to-transparent" />
                 <div className="relative flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-widest text-blue-400">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
                       AI Suggestions
                     </p>
                     <h3 className="mt-1 text-lg font-semibold text-white">
@@ -465,7 +504,7 @@ export function GeneratePickListButton({
                   }
                   rows={3}
                   placeholder="Short notes about your robot's strengths or limits..."
-                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-blue-500/50 focus:outline-none"
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-teal-500/50 focus:outline-none"
                 />
               </div>
             </div>
@@ -484,14 +523,13 @@ export function GeneratePickListButton({
                     className="dashboard-action dashboard-action-primary dashboard-action-holo px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-65"
                   >
                     {loading ? (
-                      <>
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-1 w-1 rounded-full bg-white/90 [animation:ping_1.05s_ease-in-out_infinite]" />
-                          <span className="h-1 w-1 rounded-full bg-white/75 [animation:ping_1.05s_ease-in-out_120ms_infinite]" />
-                          <span className="h-1 w-1 rounded-full bg-white/55 [animation:ping_1.05s_ease-in-out_240ms_infinite]" />
-                        </span>
+                      <span className="inline-flex items-center gap-2">
+                        <svg className="h-3.5 w-3.5 shrink-0 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
                         Generating...
-                      </>
+                      </span>
                     ) : (
                       "Generate AI Suggestions"
                     )}

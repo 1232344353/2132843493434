@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Navbar } from "@/components/navbar";
 import { AdminPanel } from "./admin-panel";
 import {
   getEventSyncMinYear,
@@ -171,7 +170,6 @@ export default async function AdminPage() {
 
   return (
     <>
-      <Navbar />
       <AdminPanel
         stats={{
           organizations: orgsRes.data?.length ?? 0,

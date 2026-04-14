@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { copyEventFormConfig } from "@/lib/event-form-actions";
 import type { EventFormCopySource } from "@/lib/event-form-config";
+import { useToast } from "@/components/toast";
 
 export function ImportFormButton({
   eventKey,
@@ -15,16 +16,10 @@ export function ImportFormButton({
   sources: EventFormCopySource[];
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [selectedSource, setSelectedSource] = useState(sources[0]?.eventKey ?? "");
   const [isPending, setIsPending] = useState(false);
-  const [status, setStatus] = useState<{ msg: string; ok: boolean } | null>(null);
-
-  useEffect(() => {
-    if (!status) return;
-    const timeout = window.setTimeout(() => setStatus(null), 3500);
-    return () => window.clearTimeout(timeout);
-  }, [status]);
 
   async function handleImport() {
     if (!selectedSource) return;
@@ -38,28 +33,17 @@ export function ImportFormButton({
     setIsPending(false);
 
     if ("error" in result) {
-      setStatus({ msg: result.error ?? "Import failed.", ok: false });
+      toast(result.error ?? "Import failed.", "error");
       return;
     }
 
     setOpen(false);
-    setStatus({ msg: "Form imported from previous event.", ok: true });
+    toast("Form imported from previous event.", "success");
     router.refresh();
   }
 
   return (
     <>
-      {status && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-medium shadow-lg transition-all duration-300 ${status.ok ? "border border-teal-500/30 bg-[#03070a] text-teal-200" : "border border-red-500/30 bg-[#03070a] text-red-200"}`}>
-          {status.ok ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-teal-400"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-red-400"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          )}
-          {status.msg}
-        </div>
-      )}
-
       <Button
         type="button"
         variant="secondary"

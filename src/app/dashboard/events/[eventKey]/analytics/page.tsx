@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Navbar } from "@/components/navbar";
 import { AnalyticsDashboard } from "./analytics-dashboard";
 import { AnalyticsTour } from "./analytics-tour";
 import { buildLabelMap, resolveLabels } from "@/lib/platform-settings";
@@ -231,26 +230,40 @@ export default async function AnalyticsPage({
 
   return (
     <div className="min-h-screen dashboard-page">
-      <Navbar />
       <AnalyticsTour />
-      <main className="mx-auto max-w-7xl px-4 pb-12 pt-32 space-y-6">
-        <div data-tour="analytics-header" className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-blue-400">
-              {eventTitle}
+      <main className="mx-auto max-w-7xl px-6 pb-12 pt-10 space-y-6">
+
+        {/* Header card */}
+        <div data-tour="analytics-header" className="overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02]">
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-teal-400/40 to-transparent" />
+          <div className="px-6 py-5">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
+                {eventTitle}
+              </p>
+              <Link
+                href={`/dashboard/events/${eventKey}`}
+                className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-white/20 hover:text-white"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+                Back
+              </Link>
+            </div>
+            <h1 className="mt-2 text-2xl font-bold text-white">Analytics</h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Scouting data and performance trends for your team.
             </p>
-            <h1 className="text-2xl font-bold">Analytics</h1>
-            <p className="mt-1 text-sm text-gray-400">
-              {scoutingEntries.length} scouting entries across{" "}
-              {teamNumbers.length} teams
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-white/[0.04] px-3 py-1 text-xs text-gray-400 ring-1 ring-white/[0.07]">
+                {scoutingEntries.length} {scoutingEntries.length === 1 ? "entry" : "entries"}
+              </span>
+              <span className="rounded-full bg-white/[0.04] px-3 py-1 text-xs text-gray-400 ring-1 ring-white/[0.07]">
+                {teamNumbers.length} teams scouted
+              </span>
+            </div>
           </div>
-          <Link
-            href={`/dashboard/events/${eventKey}`}
-            className="back-button"
-          >
-            Back
-          </Link>
         </div>
 
         <AnalyticsDashboard

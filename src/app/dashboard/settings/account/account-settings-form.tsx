@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteAccount, updateProfile } from "@/lib/auth-actions";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { useToast } from "@/components/toast";
 
 interface AccountSettingsFormProps {
   profile: {
@@ -16,12 +17,11 @@ interface AccountSettingsFormProps {
 
 export function AccountSettingsForm({ profile }: AccountSettingsFormProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [teamRoles, setTeamRoles] = useState<string[]>(profile.teamRoles ?? []);
   const [accountLoading, setAccountLoading] = useState(false);
-  const [accountMessage, setAccountMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, startDelete] = useTransition();
   const maxRoles = 4;
   const maxRolesReached = teamRoles.length >= maxRoles;
@@ -43,7 +43,6 @@ export function AccountSettingsForm({ profile }: AccountSettingsFormProps) {
   async function handleAccountSubmit(e: React.FormEvent) {
     e.preventDefault();
     setAccountLoading(true);
-    setAccountMessage(null);
 
     const formData = new FormData();
     formData.set("displayName", displayName);
@@ -51,20 +50,19 @@ export function AccountSettingsForm({ profile }: AccountSettingsFormProps) {
 
     const result = await updateProfile(formData);
     if (result?.error) {
-      setAccountMessage({ type: "error", text: result.error });
+      toast(result.error, "error");
     } else {
-      setAccountMessage({ type: "success", text: "Profile updated." });
+      toast("Profile updated.", "success");
       router.refresh();
     }
     setAccountLoading(false);
   }
 
   function handleDeleteConfirm() {
-    setDeleteError(null);
     startDelete(async () => {
       const result = await deleteAccount();
       if (result?.error) {
-        setDeleteError(result.error);
+        toast(result.error, "error");
         return;
       }
       router.replace("/login");
@@ -115,7 +113,8 @@ export function AccountSettingsForm({ profile }: AccountSettingsFormProps) {
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="mt-1 block w-full px-3 py-2 text-sm text-white shadow-sm dashboard-input"
+                disabled={accountLoading}
+                className="mt-1 block w-full px-3 py-2 text-sm text-white shadow-sm dashboard-input disabled:opacity-50"
               />
             </div>
 
@@ -170,18 +169,6 @@ export function AccountSettingsForm({ profile }: AccountSettingsFormProps) {
             </div>
           </div>
 
-          {accountMessage && (
-            <p
-              className={`rounded-lg border px-3 py-2 text-sm ${
-                accountMessage.type === "success"
-                  ? "border-green-400/30 bg-green-500/10 text-green-300"
-                  : "border-red-400/30 bg-red-500/10 text-red-300"
-              }`}
-            >
-              {accountMessage.text}
-            </p>
-          )}
-
           <button
             type="submit"
             disabled={accountLoading || !hasChanges}
@@ -217,9 +204,6 @@ export function AccountSettingsForm({ profile }: AccountSettingsFormProps) {
           >
             {isDeleting ? "Deleting..." : "Delete account"}
           </button>
-          {deleteError && (
-            <p className="text-sm text-red-300">{deleteError}</p>
-          )}
         </div>
       </div>
 

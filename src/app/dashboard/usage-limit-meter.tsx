@@ -35,10 +35,12 @@ export function UsageLimitMeter({
   resetAt,
 }: UsageLimitMeterProps) {
   const used = Math.max(0, limit - remaining);
+  const usageRatio = limit > 0 ? used / limit : 0;
   const usedPct = useMemo(() => {
     if (limit <= 0) return 0;
     return Math.max(0, Math.min(100, Math.round((used / limit) * 100)));
   }, [limit, used]);
+  const shouldShowCountdown = usageRatio >= 0.01;
   const isExhausted = usedPct >= 100;
   const fillWidth = used <= 0 ? "0%" : `${Math.max(usedPct, 4)}%`;
   const fillBackground = isExhausted
@@ -49,7 +51,7 @@ export function UsageLimitMeter({
   const [countdown, setCountdown] = useState("--");
 
   useEffect(() => {
-    if (!isExhausted) return;
+    if (!shouldShowCountdown) return;
 
     const updateCountdown = () => {
       setCountdown(formatResetCountdown(resetAt));
@@ -58,7 +60,7 @@ export function UsageLimitMeter({
     updateCountdown();
     const timer = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(timer);
-  }, [isExhausted, resetAt]);
+  }, [resetAt, shouldShowCountdown]);
 
   return (
     <div className="mt-4 rounded-xl border border-white/10 bg-gradient-to-b from-white/[0.08] to-white/[0.03] p-4">
@@ -98,7 +100,11 @@ export function UsageLimitMeter({
               : "rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-gray-300"
           }
         >
-          {isExhausted ? `At limit · resets in ${countdown}` : `${remainingPct}% remaining`}
+          {isExhausted
+            ? `At limit · resets in ${countdown}`
+            : shouldShowCountdown
+              ? `${remainingPct}% remaining · resets in ${countdown}`
+              : `${remainingPct}% remaining`}
         </p>
         <p className="text-gray-500">Usage limits may vary with system load.</p>
       </div>

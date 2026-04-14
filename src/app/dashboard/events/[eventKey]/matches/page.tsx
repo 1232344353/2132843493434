@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Navbar } from "@/components/navbar";
 import { EventDataCacher } from "@/components/event-data-cacher";
 import { MatchBriefOverlayButton } from "./match-brief-overlay-button";
 import { PaginatedMatchGrid } from "./paginated-match-grid";
@@ -291,7 +290,6 @@ export default async function MatchListPage({
 
   return (
     <div className="min-h-screen overflow-x-hidden dashboard-page">
-      <Navbar />
       <MatchesTour />
       <EventDataCacher
         eventKey={eventKey}
@@ -299,7 +297,7 @@ export default async function MatchListPage({
         matches={matches ?? []}
         assignments={myAssignments}
       />
-      <main className="mx-auto max-w-2xl px-4 pb-12 pt-32 space-y-6">
+      <main className="mx-auto max-w-2xl px-6 pb-12 pt-10 space-y-6">
         <div data-tour="matches-header" className="flex items-center justify-between">
           <div data-tour="matches-tips">
             <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
@@ -312,8 +310,9 @@ export default async function MatchListPage({
           </div>
           <Link
             href={`/dashboard/events/${eventKey}`}
-            className="back-button"
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-400 transition hover:border-white/20 hover:text-white"
           >
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
             {t("common.back")}
           </Link>
         </div>

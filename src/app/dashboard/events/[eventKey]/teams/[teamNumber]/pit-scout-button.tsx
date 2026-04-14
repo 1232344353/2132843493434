@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useToast } from "@/components/toast";
 import { AnimatePresence, motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { CounterButton } from "@/components/counter-button";
@@ -193,6 +194,7 @@ export function PitScoutButton({
   scoutName,
   config,
 }: PitScoutButtonProps) {
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -691,9 +693,10 @@ export function PitScoutButton({
         setSaving(false);
         setSavedOffline(true);
         setHasPending(true);
+        toast(`Pit scout saved offline for team ${teamNumber}.`, "info");
         setTimeout(() => setOpen(false), 1800);
       } catch {
-        setError("Failed to save offline. Please try again.");
+        toast("Failed to save offline. Please try again.", "error");
         setSaving(false);
       }
       return;
@@ -722,13 +725,14 @@ export function PitScoutButton({
     }
 
     if (result.error) {
-      setError(result.error.message);
+      toast(result.error.message, "error");
       setSaving(false);
       return;
     }
 
     setSaving(false);
     setSaved(true);
+    toast(`Pit scout saved for team ${teamNumber}.`, "success");
     setTimeout(() => setOpen(false), 1200);
   }
 

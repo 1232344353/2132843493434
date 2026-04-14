@@ -1,4 +1,5 @@
-import { SiteFooter } from "@/components/site-footer";
+import { DashboardSidebar } from "@/components/dashboard-sidebar";
+import { DashboardShell } from "./dashboard-shell";
 
 export default function DashboardLayout({
   children,
@@ -6,12 +7,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="dashboard-shell">
-      <div className="dashboard-backdrop" aria-hidden="true" />
-      <div className="dashboard-content">
-        {children}
-        <SiteFooter />
-      </div>
-    </div>
+    <DashboardShell sidebar={<DashboardSidebar />}>
+      {children}
+    </DashboardShell>
   );
 }

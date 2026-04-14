@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scouting Overview Mockup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #06080f;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+    padding: 24px;
+    min-height: 100vh;
+  }
+  .label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #43d9a2;
+  }
+  .page-title { font-size: 22px; font-weight: 700; color: #fff; margin: 6px 0 4px; }
+  .meta { font-size: 12px; color: #64748b; }
+
+  /* Event header card */
+  .event-card {
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.02);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .accent-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(52,211,153,0.4), transparent);
+  }
+  .card-inner { padding: 20px 24px 0; }
+  .event-title { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+  .meta-row { display: flex; gap: 0; flex-wrap: wrap; margin-bottom: 0; }
+  .meta-item {
+    font-size: 12px;
+    color: #64748b;
+  }
+  .meta-sep { margin: 0 8px; color: #334155; }
+
+  /* Nav tab strip */
+  .tab-strip {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 8px 12px;
+    overflow-x: auto;
+  }
+  .tab {
+    display: flex; align-items: center; gap: 6px;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tab:hover { background: rgba(255,255,255,0.05); color: #d1d5db; }
+  .tab.active {
+    color: #5eead4;
+    font-weight: 600;
+  }
+  .tab.active:hover { background: rgba(94,234,212,0.08); }
+  .tab-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.1); margin: 0 4px; }
+
+  /* Page body */
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .ai-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: linear-gradient(135deg, rgba(67,217,162,0.38) 0%, rgba(34,211,238,0.28) 100%);
+    border: 1px solid rgba(67,217,162,0.38);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #43d9a2;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(67,217,162,0.12);
+  }
+  .spark { font-size: 14px; }
+
+  /* AI summary card */
+  .ai-summary {
+    border-radius: 12px;
+    border: 1px solid rgba(67,217,162,0.22);
+    background: rgba(67,217,162,0.06);
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .ai-summary-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .ai-dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: linear-gradient(135deg, #43d9a2, #22d3ee);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: #06080f; font-weight: 800; flex-shrink: 0;
+  }
+  .ai-label { font-size: 12px; font-weight: 600; color: #43d9a2; }
+  .ai-ts { margin-left: auto; font-size: 11px; color: #475569; }
+  .ai-text { font-size: 12px; color: #cbd5e1; line-height: 1.65; }
+  .ai-text strong { color: #f1f5f9; }
+
+  /* Search row */
+  .search-row { display: flex; gap: 8px; margin-bottom: 16px; }
+  .search-input {
+    flex: 1; background: rgba(15,23,42,0.7);
+    border: 1px solid rgba(148,163,184,0.22);
+    border-radius: 8px; padding: 8px 14px;
+    font-size: 12px; color: #94a3b8;
+  }
+  .filter-btn {
+    background: rgba(15,23,42,0.7);
+    border: 1px solid rgba(148,163,184,0.22);
+    border-radius: 8px; padding: 8px 14px;
+    font-size: 12px; color: #94a3b8;
+  }
+
+  /* Team section */
+  .team-section {
+    background: rgba(15,23,42,0.72);
+    border: 1px solid rgba(148,163,184,0.22);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    backdrop-filter: blur(18px);
+  }
+  .team-section.warn { border-color: rgba(245,158,11,0.22); }
+  .team-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    cursor: pointer;
+  }
+  .team-header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .team-num { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+  .team-name { font-size: 12px; color: #64748b; }
+  .badge {
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .badge-green { background: rgba(5,150,105,0.25); color: #6ee7b7; }
+  .badge-blue { background: rgba(59,130,246,0.18); color: #93c5fd; }
+  .badge-yellow { background: rgba(245,158,11,0.18); color: #fcd34d; }
+  .badge-gray { background: rgba(51,65,85,0.5); color: #64748b; }
+  .chevron { font-size: 10px; color: #64748b; }
+  .summarize-btn {
+    background: rgba(15,23,42,0.6);
+    border: 1px solid rgba(148,163,184,0.22);
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #43d9a2;
+    display: flex; align-items: center; gap: 5px;
+    cursor: pointer;
+  }
+  .warn-label { font-size: 11px; color: #f59e0b; }
+
+  /* Expanded body */
+  .team-body { padding: 0 18px 18px; }
+  .section-label-sm {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #475569;
+    margin-bottom: 8px;
+  }
+  .pit-card {
+    background: rgba(6,8,15,0.6);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .pit-field { font-size: 11px; color: #cbd5e1; }
+  .pit-field span { color: #64748b; }
+  .ai-inline {
+    background: rgba(67,217,162,0.07);
+    border: 1px solid rgba(67,217,162,0.18);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    display: flex; gap: 8px; align-items: flex-start;
+  }
+  .ai-inline-dot {
+    width: 15px; height: 15px; border-radius: 50%;
+    background: linear-gradient(135deg, #43d9a2, #22d3ee);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 7px; color: #06080f; font-weight: 800; flex-shrink: 0; margin-top: 1px;
+  }
+  .ai-inline-label { font-size: 11px; font-weight: 600; color: #43d9a2; margin-bottom: 3px; }
+  .ai-inline-text { font-size: 11px; color: #cbd5e1; line-height: 1.55; }
+
+  /* Match entry rows */
+  .match-entry {
+    background: rgba(6,8,15,0.6);
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+  .match-id { color: #64748b; width: 38px; flex-shrink: 0; }
+  .score-pill { color: #cbd5e1; }
+  .score-val { color: #5eead4; font-weight: 600; }
+  .entry-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .scout-by { font-size: 10px; color: #64748b; }
+  .review-link { font-size: 10px; color: #43d9a2; font-weight: 600; text-decoration: none; cursor: pointer; }
+  .more-entries {
+    background: rgba(6,8,15,0.6);
+    border-radius: 6px; padding: 7px 12px;
+    text-align: center; font-size: 11px; color: #64748b;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- Event header card -->
+<div class="event-card">
+  <div class="accent-line"></div>
+  <div class="card-inner">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span class="label">Event Overview</span>
+      <a style="font-size:12px;color:#64748b;text-decoration:none;display:flex;align-items:center;gap:4px;">← Back</a>
+    </div>
+    <div class="event-title">2025 Finger Lakes Regional</div>
+    <div class="meta-row" style="margin-bottom:16px;">
+      <span class="meta-item">Rochester, NY</span>
+      <span class="meta-sep">·</span>
+      <span class="meta-item">2025</span>
+      <span class="meta-sep">·</span>
+      <span class="meta-item">42 teams</span>
+      <span class="meta-sep">·</span>
+      <span class="meta-item">72 matches</span>
+      <span class="meta-sep">·</span>
+      <span class="meta-item">Synced Apr 13</span>
+    </div>
+  </div>
+  <div class="tab-strip">
+    <a class="tab">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Matches
+    </a>
+    <div class="tab-sep"></div>
+    <a class="tab">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Analytics
+    </a>
+    <a class="tab active">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      Scouting Overview
+    </a>
+    <a class="tab">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Pick List
+    </a>
+  </div>
+</div>
+
+<!-- Page header -->
+<div class="page-header">
+  <div>
+    <div class="label">Scouting Reports</div>
+    <div class="page-title">Scouting Overview</div>
+    <div class="meta">87 match entries · 24 teams scouted · 18 pit scouts</div>
+  </div>
+  <button class="ai-btn">
+    <span class="spark">✦</span> Generate Event Summary
+  </button>
+</div>
+
+<!-- AI event summary (generated) -->
+<div class="ai-summary">
+  <div class="ai-summary-header">
+    <div class="ai-dot">✦</div>
+    <span class="ai-label">AI Event Summary</span>
+    <span class="ai-ts">Generated just now</span>
+  </div>
+  <p class="ai-text">
+    Strong scouting coverage across 24 teams with 87 total entries.
+    <strong>Teams 254, 1114, and 2056</strong> stand out as top performers with
+    consistent high auto and teleop scores. Three teams (9999, 8888, 7777) have
+    fewer than 2 entries and may need additional observation before alliance selection.
+    Pit scouting reveals a cluster of swerve drive robots with strong auto capabilities.
+    Notable: team 3310 has excellent reliability ratings across all scouts, while team 4613
+    shows high variance worth watching in qualification rounds.
+  </p>
+</div>
+
+<!-- Search + filter -->
+<div class="search-row">
+  <div class="search-input">Search teams...</div>
+  <div class="filter-btn">Filter: All Teams ▾</div>
+</div>
+
+<!-- Team 254 — expanded -->
+<div class="team-section">
+  <div class="team-header">
+    <div class="team-header-left">
+      <span class="team-num">Team 254</span>
+      <span class="team-name">The Cheesy Poofs</span>
+      <span class="badge badge-green">6 entries</span>
+      <span class="badge badge-blue">Pit scouted</span>
+    </div>
+    <span class="chevron">▲</span>
+  </div>
+  <div class="team-body">
+    <div class="section-label-sm">AI Summary</div>
+    <div class="ai-inline">
+      <div class="ai-inline-dot">✦</div>
+      <div>
+        <div class="ai-inline-label">AI Summary</div>
+        <div class="ai-inline-text">Dominant performer. Avg auto 24.3, teleop 38.1. Highly consistent across all matches, no entry below 55 total. Cycle time rated 4.8/5 by scouts. Reliable level 3 climber every match.</div>
+      </div>
+    </div>
+
+    <div class="section-label-sm">Pit Scout</div>
+    <div class="pit-card">
+      <span class="pit-field"><span>Drive:</span> Swerve</span>
+      <span class="pit-field"><span>Auto:</span> 3-piece</span>
+      <span class="pit-field"><span>Climb:</span> Level 3</span>
+      <span class="pit-field"><span>Intake:</span> Ground + HP</span>
+      <span class="pit-field"><span>Shooter:</span> Long range</span>
+    </div>
+
+    <div class="section-label-sm">Match Entries</div>
+    <div class="match-entry">
+      <span class="match-id">Qm 3</span>
+      <span class="score-pill">Auto <span class="score-val">22</span></span>
+      <span class="score-pill">Tele <span class="score-val">36</span></span>
+      <span class="score-pill">End <span class="score-val">12</span></span>
+      <div class="entry-right">
+        <span class="scout-by">Scouted by Alex K.</span>
+        <a class="review-link">Review entry →</a>
+      </div>
+    </div>
+    <div class="match-entry">
+      <span class="match-id">Qm 7</span>
+      <span class="score-pill">Auto <span class="score-val">26</span></span>
+      <span class="score-pill">Tele <span class="score-val">40</span></span>
+      <span class="score-pill">End <span class="score-val">12</span></span>
+      <div class="entry-right">
+        <span class="scout-by">Scouted by Jordan M.</span>
+        <a class="review-link">Review entry →</a>
+      </div>
+    </div>
+    <div class="more-entries">+4 more entries</div>
+  </div>
+</div>
+
+<!-- Team 1114 — collapsed, no AI summary yet -->
+<div class="team-section">
+  <div class="team-header">
+    <div class="team-header-left">
+      <span class="team-num">Team 1114</span>
+      <span class="team-name">Simbotics</span>
+      <span class="badge badge-green">5 entries</span>
+      <span class="badge badge-blue">Pit scouted</span>
+    </div>
+    <button class="summarize-btn">✦ Summarize</button>
+  </div>
+</div>
+
+<!-- Team 2056 — collapsed -->
+<div class="team-section">
+  <div class="team-header">
+    <div class="team-header-left">
+      <span class="team-num">Team 2056</span>
+      <span class="team-name">OP Robotics</span>
+      <span class="badge badge-green">4 entries</span>
+      <span class="badge badge-gray">No pit scout</span>
+    </div>
+    <button class="summarize-btn">✦ Summarize</button>
+  </div>
+</div>
+
+<!-- Team 9999 — low coverage warning -->
+<div class="team-section warn">
+  <div class="team-header">
+    <div class="team-header-left">
+      <span class="team-num">Team 9999</span>
+      <span class="team-name">Unknown Team</span>
+      <span class="badge badge-yellow">1 entry</span>
+      <span class="badge badge-gray">No pit scout</span>
+    </div>
+    <span class="warn-label">⚠ Low coverage</span>
+  </div>
+</div>
+
+</body>
+</html>
