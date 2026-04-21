@@ -2,8 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getServerT } from "@/lib/i18n/server";
+import { EventMapBackground } from "@/components/event-map-background";
 import { SyncEventForm } from "@/app/dashboard/sync-event-form";
+import { EventsListTour } from "./events-list-tour";
 import { PinButton } from "./pin-button";
+import { DeleteButton } from "./delete-button";
 import { PinnedBadge } from "./pinned-badge";
 
 export const metadata: Metadata = {
@@ -48,6 +52,7 @@ const STATUS_ORDER: Record<string, number> = {
 
 export default async function EventsPage() {
   const supabase = await createClient();
+  const t = await getServerT();
 
   const {
     data: { user },
@@ -91,15 +96,16 @@ export default async function EventsPage() {
 
   return (
     <div className="min-h-screen dashboard-page">
+      <EventsListTour />
       <main className="mx-auto max-w-7xl px-6 pb-16 pt-10">
 
         {/* Header */}
         <div className="mb-8">
           <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
-            Competition Season
+            {t("event.seasonLabel")}
           </p>
           <div className="mt-1 flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">Events</h1>
+            <h1 className="text-2xl font-bold text-white">{t("nav.events")}</h1>
             {events.length > 0 && (
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-0.5 text-xs font-medium tabular-nums text-gray-400">
                 {events.length}
@@ -107,34 +113,42 @@ export default async function EventsPage() {
             )}
           </div>
           <p className="mt-1 text-sm text-gray-400">
-            Sync events from The Blue Alliance and pin one to your dashboard.
+            {t("event.pullData").split("The Blue Alliance")[0]}
+            <a
+              href="https://www.thebluealliance.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-teal-400 hover:text-teal-300"
+            >
+              The Blue Alliance
+            </a>
+            {". "}{t("event.pinToDashboard")}
           </p>
         </div>
 
         {/* Sync form */}
-        {isCaptain && (
-          <div className="mb-8 overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015]">
-            <div className="border-b border-white/[0.05] px-6 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center text-gray-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
-                    <path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-sm font-semibold text-white">Sync a New Event</h2>
-                  <p className="text-xs text-gray-500">Pull in event data from The Blue Alliance</p>
-                </div>
+        <div data-tour="events-sync-form" className="mb-8 overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.015]">
+          <div className="border-b border-white/[0.05] px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center text-gray-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                  <path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-white">{t("event.syncNewEvent")}</h2>
+                <p className="text-xs text-gray-500">{isCaptain ? t("event.pullData") : t("event.askCaptainSync")}</p>
               </div>
             </div>
-            <div className="px-6 py-5">
-              <SyncEventForm />
-            </div>
           </div>
-        )}
+          <div className={`px-6 py-5 ${!isCaptain ? "opacity-50 pointer-events-none" : ""}`}>
+            <SyncEventForm existingEventKeys={events.map((oe) => oe.events?.tba_key ?? "").filter(Boolean)} />
+          </div>
+        </div>
 
         {/* Events grid */}
+        <div data-tour="events-grid">
         {events.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-white/10 p-16 text-center">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/5 text-gray-500">
@@ -145,11 +159,11 @@ export default async function EventsPage() {
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-gray-300">No events synced yet</p>
+            <p className="text-sm font-semibold text-gray-300">{t("dashboard.noEvents")}</p>
             <p className="mt-1 text-xs text-gray-500">
               {isCaptain
-                ? "Use the form above to sync your first event."
-                : "Ask your team captain to sync an event to get started."}
+                ? t("event.useCaptainForm")
+                : t("event.captainSyncInstructions")}
             </p>
           </div>
         ) : (
@@ -172,7 +186,7 @@ export default async function EventsPage() {
                   key={oe.id}
                   className={`group relative flex flex-col overflow-hidden rounded-2xl border transition-all duration-200 hover:shadow-[0_8px_32px_rgba(0,0,0,0.3)] ${
                     oe.is_pinned
-                      ? "border-teal-500/25 bg-teal-500/[0.035]"
+                      ? "border-teal-500/25 bg-teal-500/[0.035] hover:border-teal-500/40 hover:bg-teal-500/[0.05]"
                       : status === "live"
                       ? "border-teal-500/20 bg-teal-500/[0.025]"
                       : status === "upcoming"
@@ -193,29 +207,40 @@ export default async function EventsPage() {
                     }`}
                   />
 
-                  <div className="flex flex-1 flex-col p-5">
+                  {/* Map background */}
+                  <EventMapBackground location={ev.location ?? null} />
+
+                  {/* Left gradient overlay — keeps text readable over the map */}
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background: "linear-gradient(to right, rgba(6,11,15,0.97) 35%, rgba(6,11,15,0.5) 58%, transparent 80%)"
+                    }}
+                  />
+
+                  <div className="flex flex-1 flex-col p-5 relative z-10">
                     {/* Status badges + pin button */}
                     <div className="mb-4 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5">
                         {status === "live" && (
                           <span className="flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 ring-1 ring-emerald-500/20">
                             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
-                            Live
+                            {t("event.statusLive")}
                           </span>
                         )}
                         {status === "upcoming" && (
                           <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-400 ring-1 ring-amber-500/20">
-                            Soon
+                            {t("event.statusSoon")}
                           </span>
                         )}
                         {status === "future" && (
                           <span className="rounded-full bg-sky-500/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-sky-400 ring-1 ring-sky-500/15">
-                            Coming
+                            {t("event.statusComing")}
                           </span>
                         )}
                         {status === "past" && (
                           <span className="rounded-full bg-white/5 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wider text-gray-500 ring-1 ring-white/10">
-                            Past
+                            {t("event.statusPast")}
                           </span>
                         )}
                         <PinnedBadge
@@ -223,11 +248,19 @@ export default async function EventsPage() {
                           initialPinned={oe.is_pinned ?? false}
                         />
                       </div>
-                      <PinButton
-                        orgEventId={oe.id}
-                        isPinned={oe.is_pinned ?? false}
-                        isCaptain={isCaptain}
-                      />
+                      <div className="flex items-center gap-1.5">
+                        <PinButton
+                          orgEventId={oe.id}
+                          isPinned={oe.is_pinned ?? false}
+                          isCaptain={isCaptain}
+                        />
+                        <DeleteButton
+                          orgEventId={oe.id}
+                          eventName={ev.name ?? "Event"}
+                          eventYear={ev.year}
+                          isCaptain={isCaptain}
+                        />
+                      </div>
                     </div>
 
                     {/* Event info */}
@@ -274,29 +307,24 @@ export default async function EventsPage() {
                         {oe.is_attending ? (
                           <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                            Attending
+                            {t("event.attending")}
                           </span>
                         ) : (
                           <span className="flex items-center gap-1.5 text-xs text-gray-500">
                             <span className="h-1.5 w-1.5 rounded-full bg-gray-600" />
-                            Not attending
+                            {t("event.notAttending")}
                           </span>
                         )}
                         <Link
                           href={`/dashboard/events/${ev.tba_key}`}
                           className="flex items-center gap-1 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-medium text-gray-300 transition hover:border-teal-500/30 hover:bg-teal-500/5 hover:text-teal-300"
                         >
-                          Open
+                          {t("common.open")}
                           <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="9 18 15 12 9 6" />
                           </svg>
                         </Link>
                       </div>
-                      {syncedByName && (
-                        <p className="text-[11px] text-gray-600">
-                          Synced by {syncedByName}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -304,6 +332,7 @@ export default async function EventsPage() {
             })}
           </div>
         )}
+        </div>
       </main>
     </div>
   );

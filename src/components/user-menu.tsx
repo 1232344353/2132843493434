@@ -83,7 +83,7 @@ export function UserMenu({
         <div className="mx-4 mt-3 flex items-center gap-2 rounded-lg bg-amber-500/10 px-2.5 py-1.5">
           <span className="flex h-1.5 w-1.5 rounded-full bg-amber-400" />
           <p className="text-[11px] font-medium text-amber-300">
-            {pendingCount} {pendingCount === 1 ? "entry" : "entries"} pending sync
+            {t("menu.pendingSync", { count: pendingCount, label: pendingCount === 1 ? t("team.entry") : t("team.entriesPlural") })}
           </p>
         </div>
       )}
@@ -98,7 +98,7 @@ export function UserMenu({
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-600">
             <circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/>
           </svg>
-          Account Settings
+          {t("menu.accountSettings")}
         </Link>
 
         {isStaff && (
@@ -110,7 +110,7 @@ export function UserMenu({
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-gray-600">
               <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
             </svg>
-            Website Admin
+            {t("menu.admin")}
           </Link>
         )}
       </div>
@@ -134,9 +134,6 @@ export function UserMenu({
                     : "text-gray-500 hover:bg-white/[0.05] hover:text-gray-300"
                 }`}
               >
-                {active && (
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 flex h-1 w-1 rounded-full bg-teal-400" />
-                )}
                 {LOCALE_LABELS[loc as Locale]}
               </button>
             );

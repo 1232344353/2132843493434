@@ -17,19 +17,19 @@ const DEFAULT_TOUR_STEPS: TourStep[] = [
     descKey: "tour.welcomeDesc",
   },
   {
-    selector: "[data-tour='quick-sync']",
-    titleKey: "tour.syncEvents",
-    descKey: "tour.syncEventsDesc",
-  },
-  {
-    selector: "[data-tour='events-list']",
-    titleKey: "tour.yourEvents",
-    descKey: "tour.yourEventsDesc",
+    selector: "[data-tour='pinned-event']",
+    titleKey: "tour.dashboardPinnedEvent",
+    descKey: "tour.dashboardPinnedEventDesc",
   },
   {
     selector: "[data-tour='scouting-reports']",
     titleKey: "tour.scoutingReports",
     descKey: "tour.scoutingReportsDesc",
+  },
+  {
+    selector: "[data-tour='scout-leaderboard']",
+    titleKey: "tour.dashboardLeaderboard",
+    descKey: "tour.dashboardLeaderboardDesc",
   },
 ];
 
@@ -270,10 +270,10 @@ export function OnboardingTour({
           <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 border-r border-b border-white/15 bg-gray-950/95" />
         )}
 
-        {/* Step counter */}
-        <div className="flex items-center justify-between">
+        {/* Header: step label + skip */}
+        <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-[10px] font-semibold uppercase tracking-widest text-teal-400">
-            {t("tour.stepOf", { current: step + 1, total: totalSteps })}
+            Current Step
           </span>
           <button
             type="button"
@@ -284,8 +284,13 @@ export function OnboardingTour({
           </button>
         </div>
 
+        {/* Step title */}
+        <p className="text-lg font-bold text-white">
+          {step + 1}/{totalSteps} · {t(currentStep.titleKey)}
+        </p>
+
         {/* Progress bar */}
-        <div className="mt-2 h-1 w-full rounded-full bg-white/10">
+        <div className="mt-3 h-1 w-full rounded-full bg-white/10">
           <div
             className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-400 transition-all duration-300"
             style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
@@ -293,10 +298,7 @@ export function OnboardingTour({
         </div>
 
         {/* Content */}
-        <h3 className="mt-4 text-base font-bold text-white">
-          {t(currentStep.titleKey)}
-        </h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-gray-300">
+        <p className="mt-4 text-sm leading-relaxed text-gray-300">
           {t(currentStep.descKey)}
         </p>
 

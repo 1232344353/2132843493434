@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useToast } from "@/components/toast";
+import { useTranslation } from "@/components/i18n-provider";
 import {
   formatRateLimitUsageMessage,
   readRateLimitSnapshot,
@@ -33,8 +34,9 @@ type SyncJobStatus = {
   } | null;
 };
 
-export function SyncEventForm() {
+export function SyncEventForm({ existingEventKeys = [] }: { existingEventKeys?: string[] }) {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [eventKey, setEventKey] = useState("");
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -45,6 +47,7 @@ export function SyncEventForm() {
   const [slow, setSlow] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [activeEventKey, setActiveEventKey] = useState<string | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const router = useRouter();
 
@@ -132,13 +135,36 @@ export function SyncEventForm() {
     return () => window.clearTimeout(timer);
   }, [loading, phase]);
 
-  async function handleSync() {
+  async function handleSync(force = false) {
     if (!eventKey.trim()) return;
 
     const normalizedEventKey = eventKey.trim().toLowerCase();
+
+    // Warn if the event is already synced (unless user confirmed)
+    if (!force && existingEventKeys.includes(normalizedEventKey)) {
+      setDuplicateWarning(true);
+      return;
+    }
+    setDuplicateWarning(false);
+
+    // Extract year from event key (format: YYYY...)
+    const yearMatch = normalizedEventKey.match(/^(\d{4})/);
+    if (!yearMatch) {
+      setError(t("sync.invalidFormat"));
+      return;
+    }
+    
+    const eventYear = Number.parseInt(yearMatch[1], 10);
+    const minAllowedYear = 2025; // Update this if EVENT_SYNC_MIN_ALLOWED_DATE changes
+    
+    if (eventYear < minAllowedYear) {
+      setError(t("sync.outsideWindow", { year: eventYear, min: minAllowedYear }));
+      return;
+    }
+    
     setLoading(true);
     setError(null);
-    setStatus("Queueing sync job...");
+    setStatus(t("sync.queuing"));
     setWarning(null);
     setProgress(4);
     setPhase("event");
@@ -164,7 +190,7 @@ export function SyncEventForm() {
         throw new Error(
           resolveRateLimitMessage(
             queueRes.status,
-            queueData?.error ?? "Failed to queue sync job",
+            queueData?.error ?? t("sync.queueFailed"),
             "sync"
           )
         );
@@ -192,26 +218,25 @@ export function SyncEventForm() {
           <input
             type="text"
             value={eventKey}
-            onChange={(e) => setEventKey(e.target.value)}
-            placeholder="TBA event key (e.g. 2025hiho)"
+            onChange={(e) => { setEventKey(e.target.value); setDuplicateWarning(false); }}
+            placeholder={t("sync.placeholder")}
             className="flex-1 rounded-lg px-3 py-2 text-sm text-white shadow-sm placeholder:text-gray-500 dashboard-input"
             disabled={loading}
           />
           <button
-            onClick={handleSync}
+            onClick={() => handleSync()}
             disabled={loading || !eventKey.trim()}
-            className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-400 disabled:opacity-50"
+            className="rounded-lg border border-teal-500/30 bg-teal-500/10 px-4 py-2 text-sm font-semibold text-teal-300 shadow-sm transition hover:border-teal-500/50 hover:bg-teal-500/15 disabled:opacity-50"
           >
-            {loading ? "Syncing..." : "Sync Event"}
+            {loading ? t("common.syncing") : t("sync.syncEvent")}
           </button>
         </div>
         {!loading && (
           <p className="mt-2 text-[11px] text-gray-600">
-            Find the key after <span className="font-mono">/event/</span> in the{" "}
+            {t("sync.findKeyHelp")} <span className="font-mono">/event/</span> {t("sync.findKeyHelp2")}{" "}
             <a href="https://www.thebluealliance.com/events" target="_blank" rel="noopener noreferrer" className="hover:text-gray-500">
-              TBA URL
+              {t("sync.findKeyHelp3")}
             </a>
-            , e.g. <span className="font-mono">2025hiho</span>
           </p>
         )}
       </div>
@@ -230,8 +255,8 @@ export function SyncEventForm() {
           {loading && (() => {
             const stepIndex = phase === "event" ? 0 : phase === "stats" ? 1 : 2;
             const steps = [
-              { label: "Event data" },
-              { label: "EPA stats" },
+              { label: t("sync.eventData") },
+              { label: t("sync.epaStats") },
             ];
             return (
               <div className="flex items-center gap-4">
@@ -241,18 +266,18 @@ export function SyncEventForm() {
                   return (
                     <div key={label} className="flex items-center gap-1.5">
                       {complete ? (
-                        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-teal-500/20 text-teal-400">
+                        <span className="flex h-2.5 w-2.5 items-center justify-center rounded-full bg-teal-500/20 text-teal-400">
                           <svg viewBox="0 0 12 12" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="1.5 6.5 4.5 9.5 10.5 2.5" />
                           </svg>
                         </span>
                       ) : active ? (
-                        <span className="relative flex h-4 w-4">
+                        <span className="relative flex h-2.5 w-2.5">
                           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-teal-400/35" />
-                          <span className="relative inline-flex h-4 w-4 rounded-full bg-teal-400/70" />
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-teal-400/70" />
                         </span>
                       ) : (
-                        <span className="h-4 w-4 rounded-full border border-white/15" />
+                        <span className="h-2.5 w-2.5 rounded-full border border-white/15" />
                       )}
                       <span className={`text-xs ${active ? "font-medium text-white" : complete ? "text-teal-300/55" : "text-gray-600"}`}>
                         {label}
@@ -269,9 +294,28 @@ export function SyncEventForm() {
           )}
           {slow && loading && (
             <p className="rounded-md bg-white/5 px-2.5 py-1.5 text-xs text-gray-400">
-              This is taking a while, please keep this tab open.
+              {t("sync.takingWhile")}
             </p>
           )}
+        </div>
+      )}
+      {duplicateWarning && !loading && (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.07] px-3 py-2.5">
+          <p className="text-sm text-amber-200">{t("sync.alreadySynced")}</p>
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => handleSync(true)}
+              className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-300 transition hover:border-amber-500/50 hover:bg-amber-500/15"
+            >
+              {t("sync.syncAnyway")}
+            </button>
+            <button
+              onClick={() => setDuplicateWarning(false)}
+              className="rounded-md border border-white/10 px-3 py-1 text-xs font-medium text-gray-400 transition hover:border-white/20 hover:bg-white/5"
+            >
+              {t("common.cancel")}
+            </button>
+          </div>
         </div>
       )}
       {warning && (

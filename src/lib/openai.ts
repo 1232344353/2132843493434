@@ -10,6 +10,13 @@
  */
 
 const OPENAI_CHAT_URL = "https://api.openai.com/v1/chat/completions";
+const OPENAI_KEY_PLACEHOLDER_PATTERNS = [
+  /your[_-]?api[_-]?key/i,
+  /replace[_-]?me/i,
+  /changeme/i,
+  /example/i,
+  /placeholder/i,
+];
 
 export type OpenAIMessage = {
   role: "system" | "user" | "assistant";
@@ -83,6 +90,54 @@ type OpenAIChatResponse = {
     output_tokens?: number | null;
   } | null;
 };
+
+export function isPlaceholderOpenAiApiKey(value: string): boolean {
+  const normalized = value.trim();
+  if (!normalized) return true;
+  return OPENAI_KEY_PLACEHOLDER_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+export function getRequiredOpenAiApiKey(
+  apiKey = process.env.OPENAI_API_KEY
+): string {
+  const normalized = apiKey?.trim();
+  if (!normalized) {
+    throw new Error("OpenAI API key is not configured on the server.");
+  }
+  if (isPlaceholderOpenAiApiKey(normalized) || !normalized.startsWith("sk-")) {
+    throw new Error("OpenAI API key is not configured correctly on the server.");
+  }
+  return normalized;
+}
+
+export function toClientFacingOpenAiError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("openai api key is not configured") ||
+    normalized.includes("incorrect api key provided") ||
+    normalized.includes("invalid_api_key") ||
+    normalized.includes("openai api error 401")
+  ) {
+    return "AI is not configured correctly on the server. Update OPENAI_API_KEY and try again.";
+  }
+
+  if (normalized.includes("rate limit") || normalized.includes("openai api error 429")) {
+    return "OpenAI is rate-limited right now. Please try again shortly.";
+  }
+
+  if (
+    normalized.includes("openai api error 500") ||
+    normalized.includes("openai api error 502") ||
+    normalized.includes("openai api error 503") ||
+    normalized.includes("openai api error 504")
+  ) {
+    return "OpenAI is temporarily unavailable. Please try again shortly.";
+  }
+
+  return "Failed to generate AI response. Please try again.";
+}
 
 function normalizeText(value: unknown): string {
   if (typeof value === "string") {

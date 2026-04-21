@@ -1,6 +1,9 @@
 // src/app/api/strategy/scouting-overview/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { chatCompletionWithUsage } from "@/lib/openai";
+import {
+  getRequiredOpenAiApiKey,
+  toClientFacingOpenAiError,
+} from "@/lib/openai";
 import { createClient } from "@/lib/supabase/server";
 import { summarizeScouting } from "@/lib/scouting-summary";
 import { summarizeExtraScoutingSignals } from "@/lib/scouting-ai-insights";
@@ -22,11 +25,27 @@ import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
+function extractDeltaText(deltaContent: unknown): string {
+  if (typeof deltaContent === "string") return deltaContent;
+  if (!Array.isArray(deltaContent)) return "";
+  let combined = "";
+  for (const part of deltaContent) {
+    if (!part || typeof part !== "object") continue;
+    const maybeText = (part as { text?: unknown }).text;
+    if (typeof maybeText === "string") { combined += maybeText; continue; }
+    const maybeNested = (part as { text?: { value?: unknown } }).text?.value;
+    if (typeof maybeNested === "string") combined += maybeNested;
+  }
+  return combined;
+}
+
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  let apiKey: string;
+  try {
+    apiKey = getRequiredOpenAiApiKey();
+  } catch (error) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY not configured" },
+      { error: toClientFacingOpenAiError(error) },
       { status: 500 }
     );
   }
@@ -101,62 +120,66 @@ export async function POST(request: NextRequest) {
 
   const gameContext = buildFrcGamePrompt(event.year);
 
-  let summaryText: string;
+  let prompt: string;
+  let maxCompletionTokens: number;
 
-  if (scope === "event") {
-    const scoutingEntries =
-      matchIds.length > 0
-        ? (
-            await supabase
-              .from("scouting_entries")
-              .select("team_number, auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes, ability_answers, custom_data")
-              .eq("org_id", profile.org_id)
-              .in("match_id", matchIds)
-          ).data ?? []
-        : [];
+  try {
+    if (scope === "event") {
+      const scoutingEntries =
+        matchIds.length > 0
+          ? (
+              await supabase
+                .from("scouting_entries")
+                .select("team_number, auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes, ability_answers, custom_data")
+                .eq("org_id", profile.org_id)
+                .in("match_id", matchIds)
+            ).data ?? []
+          : [];
 
-    const pitEntries =
-      (
-        await supabase
-          .from("pit_scout_entries")
-          .select("team_number")
-          .eq("org_id", profile.org_id)
-          .eq("event_id", eventId)
-      ).data ?? [];
+      const pitEntries =
+        (
+          await supabase
+            .from("pit_scout_entries")
+            .select("team_number")
+            .eq("org_id", profile.org_id)
+            .eq("event_id", eventId)
+        ).data ?? [];
 
-    const pitScoutedTeams = new Set(pitEntries.map((p) => p.team_number));
+      const pitScoutedTeams = new Set(pitEntries.map((p) => p.team_number));
 
-    const byTeam = new Map<number, typeof scoutingEntries>();
-    for (const entry of scoutingEntries) {
-      if (!byTeam.has(entry.team_number)) byTeam.set(entry.team_number, []);
-      byTeam.get(entry.team_number)!.push(entry);
-    }
+      const byTeam = new Map<number, typeof scoutingEntries>();
+      for (const entry of scoutingEntries) {
+        if (!byTeam.has(entry.team_number)) byTeam.set(entry.team_number, []);
+        byTeam.get(entry.team_number)!.push(entry);
+      }
 
-    const teamSummaryLines: string[] = [];
-    for (const [tn, entries] of byTeam.entries()) {
-      const summary = summarizeScouting(entries);
-      const extra = summarizeExtraScoutingSignals(
-        entries,
-        abilityQuestions,
-        formConfig.customSections ?? []
-      );
-      const pit = pitScoutedTeams.has(tn) ? "pit scouted" : "no pit scout";
-      const avg = summary
-        ? `avg auto ${summary.avg_auto}, teleop ${summary.avg_teleop}, endgame ${summary.avg_endgame}`
-        : "no averages";
-      const notes = summary?.notes.length ? `notes: ${summary.notes.slice(0, 2).join("; ")}` : "";
-      const extraStr = extra.length ? extra.slice(0, 3).join(", ") : "";
-      teamSummaryLines.push(
-        `Team ${tn}: ${entries.length} entries, ${avg}, ${pit}${notes ? `, ${notes}` : ""}${extraStr ? `, ${extraStr}` : ""}`
-      );
-    }
+      const teamSummaryLines: string[] = [];
+      for (const [tn, entries] of byTeam.entries()) {
+        const summary = summarizeScouting(entries);
+        const extra = summarizeExtraScoutingSignals(
+          entries,
+          abilityQuestions,
+          formConfig.customSections ?? []
+        );
+        const pit = pitScoutedTeams.has(tn) ? "pit scouted" : "no pit scout";
+        const avg = summary
+          ? `avg auto ${summary.avg_auto}, teleop ${summary.avg_teleop}, endgame ${summary.avg_endgame}`
+          : "no averages";
+        const notes = summary?.notes.length
+          ? `notes: ${summary.notes.slice(0, 2).join("; ")}`
+          : "";
+        const extraStr = extra.length ? extra.slice(0, 3).join(", ") : "";
+        teamSummaryLines.push(
+          `Team ${tn}: ${entries.length} entries, ${avg}, ${pit}${notes ? `, ${notes}` : ""}${extraStr ? `, ${extraStr}` : ""}`
+        );
+      }
 
-    const lowCoverage = Array.from(byTeam.entries())
-      .filter(([, e]) => e.length < 2)
-      .map(([tn]) => `Team ${tn}`)
-      .join(", ");
+      const lowCoverage = Array.from(byTeam.entries())
+        .filter(([, e]) => e.length < 2)
+        .map(([tn]) => `Team ${tn}`)
+        .join(", ");
 
-    const prompt = `You are analyzing FRC scouting data for an alliance selection advisor.
+      prompt = `You are analyzing FRC scouting data for an alliance selection advisor.
 
 ${gameContext}
 
@@ -167,61 +190,56 @@ ${teamSummaryLines.join("\n")}
 
 ${lowCoverage ? `Low coverage teams (fewer than 2 entries): ${lowCoverage}` : "All teams have at least 2 entries."}
 
-Write a concise 3-4 sentence narrative for a drive team captain. Cover: overall coverage quality, the top 2-3 standout teams by scouting data, any low-coverage or high-variance teams worth flagging, and any notable field-wide patterns. Reference team numbers directly. No hype. No em dashes.`;
+Markdown is supported. Use **bold** for team numbers and key stats. Use ### headers to separate sections if the response warrants it.
 
-    const result = await chatCompletionWithUsage(apiKey, {
-      model: "gpt-5-mini",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 300,
-    });
+Write a concise narrative for a drive team captain. Cover: overall coverage quality, the top 2-3 standout teams by scouting data, any low-coverage or high-variance teams worth flagging, and any notable field-wide patterns. Reference team numbers directly. No hype. No em dashes.`;
 
-    await checkRateLimit(aiLimitKey, TEAM_AI_WINDOW_MS, aiLimit, result.usage?.totalTokens ?? 100);
-    summaryText = result.text;
-  } else {
-    // team scope
-    const teamEntries =
-      matchIds.length > 0
-        ? (
-            await supabase
-              .from("scouting_entries")
-              .select("auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes, ability_answers, custom_data")
-              .eq("org_id", profile.org_id)
-              .eq("team_number", teamNumber!)
-              .in("match_id", matchIds)
-              .order("created_at", { ascending: true })
-          ).data ?? []
-        : [];
+      maxCompletionTokens = 300;
+    } else {
+      // team scope
+      const teamEntries =
+        matchIds.length > 0
+          ? (
+              await supabase
+                .from("scouting_entries")
+                .select("auto_score, teleop_score, endgame_score, defense_rating, reliability_rating, notes, ability_answers, custom_data")
+                .eq("org_id", profile.org_id)
+                .eq("team_number", teamNumber!)
+                .in("match_id", matchIds)
+                .order("created_at", { ascending: true })
+            ).data ?? []
+          : [];
 
-    const pitEntry =
-      (
-        await supabase
-          .from("pit_scout_entries")
-          .select("drivetrain, intake_types, scoring_ranges, climb_capability, auto_description, notes")
-          .eq("org_id", profile.org_id)
-          .eq("event_id", eventId)
-          .eq("team_number", teamNumber!)
-          .maybeSingle()
-      ).data ?? null;
+      const pitEntry =
+        (
+          await supabase
+            .from("pit_scout_entries")
+            .select("drivetrain, intake_types, scoring_ranges, climb_capability, auto_description, notes")
+            .eq("org_id", profile.org_id)
+            .eq("event_id", eventId)
+            .eq("team_number", teamNumber!)
+            .maybeSingle()
+        ).data ?? null;
 
-    const summary = summarizeScouting(teamEntries);
-    const extra = summarizeExtraScoutingSignals(
-      teamEntries,
-      abilityQuestions,
-      formConfig.customSections ?? []
-    );
+      const summary = summarizeScouting(teamEntries);
+      const extra = summarizeExtraScoutingSignals(
+        teamEntries,
+        abilityQuestions,
+        formConfig.customSections ?? []
+      );
 
-    const entriesText = summary
-      ? `${teamEntries.length} entries. Avg auto ${summary.avg_auto}, teleop ${summary.avg_teleop}, endgame ${summary.avg_endgame}, defense ${summary.avg_defense}/5, reliability ${summary.avg_reliability}/5.${summary.notes.length ? ` Scout notes: ${summary.notes.join("; ")}.` : ""}${extra.length ? ` Extra signals: ${extra.join(", ")}.` : ""}`
-      : "No match entries.";
+      const entriesText = summary
+        ? `${teamEntries.length} entries. Avg auto ${summary.avg_auto}, teleop ${summary.avg_teleop}, endgame ${summary.avg_endgame}, defense ${summary.avg_defense}/5, reliability ${summary.avg_reliability}/5.${summary.notes.length ? ` Scout notes: ${summary.notes.join("; ")}.` : ""}${extra.length ? ` Extra signals: ${extra.join(", ")}.` : ""}`
+        : "No match entries.";
 
-    const toArr = (v: unknown): string[] =>
-      Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+      const toArr = (v: unknown): string[] =>
+        Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
 
-    const pitText = pitEntry
-      ? `Pit scout: drivetrain ${pitEntry.drivetrain ?? "unknown"}, intake ${toArr(pitEntry.intake_types).join("/") || "unknown"}, scoring ${toArr(pitEntry.scoring_ranges).join("/") || "unknown"}, climb ${pitEntry.climb_capability ?? "unknown"}, auto: ${pitEntry.auto_description ?? "unknown"}.${pitEntry.notes ? ` Notes: ${pitEntry.notes}.` : ""}`
-      : "No pit scout data.";
+      const pitText = pitEntry
+        ? `Pit scout: drivetrain ${pitEntry.drivetrain ?? "unknown"}, intake ${toArr(pitEntry.intake_types).join("/") || "unknown"}, scoring ${toArr(pitEntry.scoring_ranges).join("/") || "unknown"}, climb ${pitEntry.climb_capability ?? "unknown"}, auto: ${pitEntry.auto_description ?? "unknown"}.${pitEntry.notes ? ` Notes: ${pitEntry.notes}.` : ""}`
+        : "No pit scout data.";
 
-    const prompt = `You are an FRC scouting analyst. Summarize Team ${teamNumber}'s performance in 2-3 sentences for a drive team captain.
+      prompt = `You are an FRC scouting analyst. Summarize Team ${teamNumber}'s performance in 2-3 sentences for a drive team captain.
 
 ${gameContext}
 
@@ -229,17 +247,114 @@ ${entriesText}
 
 ${pitText}
 
+Markdown is supported. Use **bold** for key stats and notable observations.
+
 Be direct. Focus on consistency, key strengths, and any weaknesses worth noting. No hype. No em dashes.`;
 
-    const result = await chatCompletionWithUsage(apiKey, {
-      model: "gpt-5-mini",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 150,
-    });
-
-    await checkRateLimit(aiLimitKey, TEAM_AI_WINDOW_MS, aiLimit, result.usage?.totalTokens ?? 50);
-    summaryText = result.text;
+      maxCompletionTokens = 150;
+    }
+  } catch (err) {
+    return NextResponse.json(
+      { error: toClientFacingOpenAiError(err) },
+      { status: 500, headers: limitHeaders }
+    );
   }
 
-  return NextResponse.json({ summary: summaryText }, { headers: limitHeaders });
+  // Stream response from OpenAI
+  try {
+    const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-5.1",
+        messages: [{ role: "user", content: prompt }],
+        max_completion_tokens: maxCompletionTokens,
+        stream: true,
+        stream_options: { include_usage: true },
+      }),
+    });
+
+    if (!upstream.ok) {
+      const errBody = await upstream.text().catch(() => "");
+      return NextResponse.json(
+        { error: toClientFacingOpenAiError(errBody || `OpenAI request failed (${upstream.status})`) },
+        { status: 502, headers: limitHeaders }
+      );
+    }
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = upstream.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let streamedText = "";
+        let usageTokens: number | null = null;
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() ?? "";
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || !trimmed.startsWith("data: ")) continue;
+              const payload = trimmed.slice(6);
+              if (payload === "[DONE]") {
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                continue;
+              }
+              try {
+                const parsed = JSON.parse(payload);
+                const maybeUsage = Number(parsed?.usage?.total_tokens);
+                if (Number.isFinite(maybeUsage) && maybeUsage >= 0) {
+                  usageTokens = Math.floor(maybeUsage);
+                }
+                const delta = extractDeltaText(parsed.choices?.[0]?.delta?.content);
+                if (delta.length > 0) {
+                  streamedText += delta;
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ token: delta })}\n\n`)
+                  );
+                }
+              } catch {
+                // Skip malformed chunks
+              }
+            }
+          }
+        } finally {
+          const fallbackUsage = Math.ceil((prompt.length + streamedText.length) / 4);
+          const usageCost = Math.max(1, usageTokens ?? fallbackUsage);
+          const boundedCost = Math.max(1, Math.min(aiLimit, snapshot.remaining, usageCost));
+          try {
+            await checkRateLimit(aiLimitKey, TEAM_AI_WINDOW_MS, aiLimit, boundedCost);
+          } catch {
+            // Don't break the client stream if usage accounting fails.
+          }
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+        ...limitHeaders,
+      },
+    });
+  } catch (err) {
+    return NextResponse.json(
+      { error: toClientFacingOpenAiError(err) },
+      { status: 500, headers: limitHeaders }
+    );
+  }
 }

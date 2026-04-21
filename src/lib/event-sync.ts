@@ -172,17 +172,12 @@ export async function syncEventData(params: {
     ? tbaTeams.some((team) => team.team_number === orgTeamNumber)
     : false;
 
-  const orgEventRow: Record<string, unknown> = {
-    org_id: orgId,
-    event_id: dbEvent.id,
-    is_attending: isAttending,
-  };
-  if (syncedBy) {
-    orgEventRow.synced_by = syncedBy;
-  }
-
   const { error: orgEventError } = await supabase.from("org_events").upsert(
-    orgEventRow,
+    {
+      org_id: orgId,
+      event_id: dbEvent.id,
+      is_attending: isAttending,
+    },
     { onConflict: "org_id,event_id" }
   );
 
@@ -219,7 +214,7 @@ export async function syncEventData(params: {
     matchCount: tbaMatches.length,
     warning: isAttending
       ? null
-      : "Your team isn’t listed for this event. You can still scout it, but it won’t be on your schedule.",
+      : "Your team isn't listed for this event. You can still scout it, but you won't have access to some features.",
   };
 }
 

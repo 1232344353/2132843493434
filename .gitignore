@@ -53,3 +53,8 @@ scripts/data/
 .claude/start.sh
 *.md
 .claude/worktrees/unruffled-cray/
+.superpowers/brainstorm/36809-1776146634/state/server-info
+.superpowers/brainstorm/36809-1776146634/state/server-stopped
+.superpowers/brainstorm/36809-1776146634/state/server.log
+.superpowers/brainstorm/36809-1776146634/state/server-info
+/.superpowers

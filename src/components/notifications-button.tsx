@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
+import { changelog } from "@/content/changelog";
+import { useTranslation } from "@/components/i18n-provider";
 
 type NotifType = "feature" | "update" | "fix";
 
@@ -15,35 +17,36 @@ interface Notification {
   date: string;
 }
 
-const NOTIFICATIONS: Notification[] = [
-  {
-    id: "n3",
-    type: "feature",
-    title: "Events page + pin feature",
-    body: "Sync events from The Blue Alliance and pin one to your dashboard hero card.",
-    date: "Apr 2025",
-  },
-  {
-    id: "n2",
-    type: "feature",
-    title: "Sidebar navigation",
-    body: "New sidebar layout with Dashboard, Events, Reports, and Settings.",
-    date: "Apr 2025",
-  },
-  {
-    id: "n1",
-    type: "update",
-    title: "Scouting form improvements",
-    body: "Custom ability questions per event and improved offline sync reliability.",
-    date: "Mar 2025",
-  },
-];
+function generateNotificationsFromChangelog(): Notification[] {
+  return changelog.slice(0, 3).map((entry, index) => {
+    // Determine the dominant type from the changes
+    const types = entry.changes.map(c => c.type);
+    const typeCount = {
+      new: types.filter(t => t === "new").length,
+      improved: types.filter(t => t === "improved").length,
+      fixed: types.filter(t => t === "fixed").length,
+    };
+    
+    let notifType: NotifType = "feature";
+    if (typeCount.new > 0) {
+      notifType = "feature";
+    } else if (typeCount.improved > 0) {
+      notifType = "update";
+    } else if (typeCount.fixed > 0) {
+      notifType = "fix";
+    }
 
-const TYPE_META: Record<NotifType, { label: string; color: string }> = {
-  feature: { label: "Feature", color: "bg-teal-500/10 text-teal-400 ring-1 ring-teal-500/20" },
-  update:  { label: "Update",  color: "bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20" },
-  fix:     { label: "Fix",     color: "bg-sky-500/10 text-sky-400 ring-1 ring-sky-500/20" },
-};
+    return {
+      id: `n${index}`,
+      type: notifType,
+      title: entry.title,
+      body: entry.summary,
+      date: entry.week,
+    };
+  });
+}
+
+const NOTIFICATIONS = generateNotificationsFromChangelog();
 
 const STORAGE_KEY = "pitpilot-read-notifications";
 
@@ -71,6 +74,7 @@ export function NotificationsButton() {
   const [mounted, setMounted] = useState(false);
   const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({ top: 52, left: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const { t } = useTranslation();
 
   useEffect(() => {
     setMounted(true);
@@ -122,7 +126,7 @@ export function NotificationsButton() {
         ref={buttonRef}
         type="button"
         onClick={handleOpen}
-        aria-label="Notifications"
+        aria-label={t("notif.notificationsLabel")}
         className="relative flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition hover:bg-white/[0.06] hover:text-gray-300"
       >
         <svg
@@ -162,8 +166,8 @@ export function NotificationsButton() {
                 <motion.div
                   role="dialog"
                   aria-modal="true"
-                  aria-label="What's new"
-                  className="fixed z-[999] w-[300px] overflow-hidden rounded-2xl border border-white/[0.1] bg-[#0c1320] shadow-[0_24px_64px_rgba(0,0,0,0.7)]"
+                  aria-label={t("notif.whatsNew")}
+                   className="fixed z-[999] w-[300px] rounded-2xl border border-white/[0.1] bg-[#0c1320] shadow-[0_24px_64px_rgba(0,0,0,0.7)] flex flex-col"
                   style={panelStyle}
                   initial={{ opacity: 0, y: -8, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -177,10 +181,10 @@ export function NotificationsButton() {
                   <div className="flex items-center justify-between px-4 py-3.5">
                     <div>
                       <p className="text-sm font-semibold text-white leading-none mb-0.5">
-                        What&apos;s new
+                        {t("notif.whatsNew")}
                       </p>
                       <p className="text-[11px] text-gray-500">
-                        {allRead ? "You're up to date" : `${unreadCount} unread`}
+                        {allRead ? t("notif.upToDate") : t("notif.unreadCount", { count: unreadCount })}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
@@ -190,16 +194,16 @@ export function NotificationsButton() {
                           onClick={markAllRead}
                           className="rounded-md px-2 py-1 text-[10px] font-medium text-gray-500 transition hover:bg-white/[0.06] hover:text-gray-300"
                         >
-                          Mark all read
+                          {t("notif.markAllRead")}
                         </button>
                       )}
                       <button
                         type="button"
                         onClick={handleClose}
-                        aria-label="Close"
+                        aria-label={t("common.close")}
                         className="rounded-md px-2 py-1 text-[10px] font-medium text-gray-600 transition hover:bg-white/[0.06] hover:text-gray-300"
                       >
-                        Close
+                        {t("common.close")}
                       </button>
                     </div>
                   </div>
@@ -207,7 +211,7 @@ export function NotificationsButton() {
                   <div className="h-px bg-white/[0.06]" />
 
                   {/* Notification entries */}
-                  <div className="max-h-[320px] overflow-y-auto">
+                  <div className="flex-1 min-h-0 overflow-y-auto">
                     {allRead ? (
                       <motion.div
                         initial={{ opacity: 0, y: 4 }}
@@ -215,13 +219,12 @@ export function NotificationsButton() {
                         transition={{ duration: 0.2, delay: 0.05 }}
                         className="flex flex-col items-center justify-center gap-1.5 py-9 px-5 text-center"
                       >
-                        <p className="text-sm font-medium text-white">All caught up</p>
-                        <p className="text-xs text-gray-500">No new updates since your last visit.</p>
+                        <p className="text-sm font-medium text-white">{t("notif.allCaughtUp")}</p>
+                        <p className="text-xs text-gray-500">{t("notif.noUpdates")}</p>
                       </motion.div>
                     ) : (
                       NOTIFICATIONS.map((n, i) => {
                         const isUnread = !readIds.has(n.id);
-                        const meta = TYPE_META[n.type];
                         return (
                           <motion.div
                             key={n.id}
@@ -236,9 +239,6 @@ export function NotificationsButton() {
                               <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-teal-400/60" />
                             )}
                             <div className="mb-1 flex items-center gap-2">
-                              <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${meta.color}`}>
-                                {meta.label}
-                              </span>
                               <span className="text-[10px] text-gray-600">{n.date}</span>
                             </div>
                             <p className="text-xs font-semibold text-white leading-snug">
@@ -261,7 +261,7 @@ export function NotificationsButton() {
                       onClick={handleClose}
                       className="flex items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.03] py-2 text-xs font-medium text-gray-400 transition hover:border-white/[0.14] hover:bg-white/[0.06] hover:text-white"
                     >
-                      View full changelog
+                      {t("notif.viewChangelog")}
                     </Link>
                   </div>
                 </motion.div>
