@@ -1,23 +1,3 @@
-# PitPilot
-
-PitPilot is an FRC scouting and strategy platform built with Next.js + Supabase.
-
-## Core Features
-
-- Team/event management and role-based access
-- Match scouting forms and reports
-- Draft room + alliance planning tools
-- AI-generated team briefs and pick list suggestions
-- TBA + Statbotics integrations
-
-## Tech Stack
-
-- Next.js (App Router) + TypeScript
-- Tailwind CSS
-- Supabase (Postgres/Auth/Realtime)
-- OpenAI API
-- The Blue Alliance API
-
 ## Local Setup
 
 1. Install dependencies:
