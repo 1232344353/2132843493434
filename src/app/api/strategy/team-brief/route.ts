@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { chatCompletionWithUsage } from "@/lib/openai";
+import {
+  chatCompletionWithUsage,
+  getRequiredOpenAiApiKey,
+  toClientFacingOpenAiError,
+} from "@/lib/openai";
 import { createClient } from "@/lib/supabase/server";
 import { summarizeScouting } from "@/lib/scouting-summary";
 import {
@@ -146,10 +150,12 @@ function seasonSummary(year: number, data: JsonObject | null) {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  let apiKey: string;
+  try {
+    apiKey = getRequiredOpenAiApiKey();
+  } catch (error) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY not configured" },
+      { error: toClientFacingOpenAiError(error) },
       { status: 500 }
     );
   }
@@ -511,7 +517,9 @@ Rules:
       { headers: consumedHeaders }
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: toClientFacingOpenAiError(error) },
+      { status: 500 }
+    );
   }
 }

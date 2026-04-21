@@ -5,6 +5,8 @@ import { NotificationsButton } from "@/components/notifications-button";
 import {
   DashboardSidebarLinks,
   DashboardMobileNav,
+  SidebarCloseButton,
+  SidebarParticles,
 } from "@/components/dashboard-sidebar-nav";
 
 const BANNER_STYLES: Record<string, string> = {
@@ -47,9 +49,10 @@ export async function DashboardSidebar() {
       }
     | null
     | undefined;
-  const teamLabel = org?.team_number
-    ? `Team ${org.team_number}`
-    : org?.name ?? null;
+
+  const teamNumber = org?.team_number ?? null;
+  const teamName = org?.name ?? null;
+  const teamLabel = teamNumber ? `Team ${teamNumber}` : teamName ?? "My Team";
 
   const isStaff = profile?.is_staff === true;
   const displayName = profile?.display_name ?? user?.email ?? "Account";
@@ -57,66 +60,63 @@ export async function DashboardSidebar() {
 
   return (
     <>
-      {/* ── Desktop fixed sidebar ── */}
-      <aside className="fixed left-0 top-0 z-50 hidden h-full w-64 flex-col border-r border-white/[0.05] bg-[#0a0f12] lg:flex">
-        {/* Brand */}
-        <div className="border-b border-white/[0.05] px-5 py-4">
-          <div className="flex items-center justify-between">
-            <Link
-              href="/dashboard"
-              className="font-outfit text-lg font-bold tracking-tight text-white"
-            >
-              Pit<span className="text-teal-400">Pilot</span>
-            </Link>
-            <div className="flex items-center gap-1.5">
-              <NotificationsButton />
-              <Link
-                href="/changelog"
-                className="text-[10px] font-medium text-gray-600 transition hover:text-gray-400"
-                title="View changelog"
-              >
-                v0.1.0
-              </Link>
-            </div>
-          </div>
-          {teamLabel && (
-            <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-gray-500">
-              {teamLabel}
-            </p>
-          )}
+    <DashboardMobileNav isStaff={isStaff} />
+    <div className="relative flex h-full w-64 flex-col">
+      <SidebarParticles />
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <Link
+          href="/dashboard"
+          className="font-outfit text-base font-bold tracking-tight text-white"
+        >
+          Pit<span className="text-teal-400">Pilot</span>
+        </Link>
+        <div className="flex items-center gap-1">
+          <NotificationsButton />
+          <SidebarCloseButton />
         </div>
+      </div>
 
-        {/* Announcement banner */}
-        {announcement?.message && (
-          <div
-            className={`mx-3 mt-3 rounded-lg border px-3 py-2 text-xs font-medium ${BANNER_STYLES[announcement.variant] ?? BANNER_STYLES.info}`}
-          >
-            {announcement.message}
-          </div>
+      {/* ── Team name row ── */}
+      <div className="mx-3 mb-2 flex items-center gap-2.5 rounded-lg px-2 py-2 transition hover:bg-white/[0.04]">
+        <span className="flex-1 truncate text-sm font-medium text-gray-200">{teamLabel}</span>
+        <Link
+          href="/changelog"
+          className="text-[9px] font-medium text-gray-600 transition hover:text-gray-400"
+          title="View changelog"
+        >
+          v2.1.3
+        </Link>
+      </div>
+
+      {/* Announcement banner */}
+      {announcement?.message && (
+        <div
+          className={`mx-3 mb-2 rounded-lg border px-3 py-2 text-xs font-medium ${BANNER_STYLES[announcement.variant] ?? BANNER_STYLES.info}`}
+        >
+          {announcement.message}
+        </div>
+      )}
+
+      {/* ── Navigation ── */}
+      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1">
+        <DashboardSidebarLinks isStaff={isStaff} />
+      </div>
+
+      {/* ── User footer ── */}
+      <div className="border-t border-white/[0.05] p-3">
+        {user && (
+          <UserMenu
+            name={displayName}
+            email={user.email ?? ""}
+            isStaff={isStaff}
+            role={roleLabel}
+            expanded
+            planTier={org?.plan_tier ?? undefined}
+          />
         )}
-
-        {/* Navigation links */}
-        <div className="min-h-0 flex-1 overflow-y-auto py-3">
-          <DashboardSidebarLinks isStaff={isStaff} />
-        </div>
-
-        {/* User profile footer */}
-        <div className="border-t border-white/[0.05] p-3">
-          {user && (
-            <UserMenu
-              name={displayName}
-              email={user.email ?? ""}
-              isStaff={isStaff}
-              role={roleLabel}
-              expanded
-              planTier={org?.plan_tier ?? undefined}
-            />
-          )}
-        </div>
-      </aside>
-
-      {/* ── Mobile bottom tab bar ── */}
-      <DashboardMobileNav isStaff={isStaff} />
+      </div>
+    </div>
     </>
   );
 }

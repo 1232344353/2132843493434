@@ -69,5 +69,5 @@ export function formatRateLimitUsageMessage(
     return `Sync usage: ${usedPct}% (${used}/${snapshot.limit}). Resets in ${resetIn}.`;
   }
 
-  return `AI usage: ${usedPct}% (${used}/${snapshot.limit} tokens) for your team. Resets in ${resetIn}.`;
+  return `AI usage: ${usedPct}% for your team. Resets in ${resetIn}.`;
 }

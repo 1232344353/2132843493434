@@ -4,6 +4,22 @@ export default function ScoutingOverviewLoading() {
   return (
     <div className="min-h-screen dashboard-page">
       <main className="mx-auto max-w-4xl space-y-5 px-6 pb-12 pt-10">
+        {/* Event header card skeleton */}
+        <div className="mb-6 overflow-hidden rounded-2xl border border-white/[0.07] bg-white/[0.02]">
+          <div className="h-px w-full bg-gradient-to-r from-transparent via-teal-400/40 to-transparent" />
+          <div className="px-6 py-5 space-y-2">
+            <Skeleton className="h-2.5 w-24" />
+            <Skeleton className="h-7 w-64" />
+            <Skeleton className="h-2.5 w-80" />
+          </div>
+          <div className="flex items-center gap-2 border-t border-white/[0.06] px-4 py-2.5">
+            <Skeleton className="h-7 w-20 rounded-lg" />
+            <Skeleton className="h-7 w-20 rounded-lg" />
+            <Skeleton className="h-7 w-32 rounded-lg" />
+            <Skeleton className="h-7 w-20 rounded-lg" />
+          </div>
+        </div>
+
         {/* Page header */}
         <div className="flex items-start justify-between">
           <div className="space-y-1.5">

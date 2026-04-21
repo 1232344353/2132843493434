@@ -14,12 +14,14 @@ export interface ChangelogWeek {
 
 export const changelog: ChangelogWeek[] = [
   {
-    week: "Apr 11",
-    title: "New dashboard and Google sign-in",
-    summary: "The dashboard got a full visual overhaul, and you can now sign in with Google — no magic link needed.",
+    week: "Apr 19",
+    title: "Dashboard overhaul, Google sign-in, and Scouting Overview",
+    summary: "The dashboard got a full visual overhaul with Google sign-in, plus a new Scouting Overview page to review every team's data in one place with optional AI summaries.",
     changes: [
-      { type: "improved", text: "Dashboard UI overhauled with a cleaner layout and updated visuals across all pages" },
-      { type: "new", text: "Sign in or sign up with Google as an alternative to magic link email" },
+      { type: "new", text: "Dashboard UI was overhauled with a cleaner layout and updated visuals, and you can now sign in or sign up with Google as an alternative to magic link email" },
+      { type: "new", text: "Scouting Overview page shows all match entries and pit scout data grouped by team, with expand/collapse per team" },
+      { type: "new", text: "Generate an AI summary for any individual team or for the entire event's scouting coverage" },
+      { type: "new", text: "Low-coverage teams are automatically flagged when they have fewer than 2 entries" },
     ],
   },
   {

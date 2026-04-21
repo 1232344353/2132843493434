@@ -7,10 +7,12 @@ import { createPortal } from "react-dom";
 import { updateOrganization } from "@/lib/auth-actions";
 import { removeMemberFromOrganization, updateMemberRole } from "@/lib/captain-actions";
 import { DeleteTeamButton } from "@/components/delete-team-button";
+import { LeaveTeamButton } from "@/components/leave-team-button";
 import { hasSupporterAccess } from "@/lib/rate-limit";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { useToast } from "@/components/toast";
+import { useTranslation } from "@/components/i18n-provider";
 
 interface TeamSettingsFormProps {
   org: {
@@ -65,6 +67,7 @@ export function TeamSettingsForm({
   const billingState = searchParams.get("billing");
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // Team settings state
   const [teamName, setTeamName] = useState(org.name);
@@ -399,52 +402,52 @@ export function TeamSettingsForm({
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs uppercase tracking-widest text-gray-400">Team</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400">{t("settings.team")}</p>
           <p className="mt-1 text-lg font-semibold text-white">
             {org.teamNumber ? `#${org.teamNumber}` : "Unassigned"}
           </p>
         </div>
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs uppercase tracking-widest text-gray-400">Members</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400">{t("settings.members")}</p>
           <p className="mt-1 text-lg font-semibold text-white">
-            {memberCount} {memberCount === 1 ? "member" : "members"}
+            {memberCount}
           </p>
         </div>
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs uppercase tracking-widest text-gray-400">Plan</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400">{t("settings.plan")}</p>
           <p className="mt-1 text-lg font-semibold text-white">
             {planLabel}
           </p>
         </div>
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-xs uppercase tracking-widest text-gray-400">Access</p>
+          <p className="text-xs uppercase tracking-widest text-gray-400">{t("settings.access")}</p>
           <p className="mt-1 text-lg font-semibold text-white">
-            {isCaptain ? "Captain" : "Scout"}
+            {isCaptain ? t("settings.captain") : t("settings.scout")}
           </p>
         </div>
       </div>
 
       <div className="rounded-2xl dashboard-panel dashboard-card p-6">
-        <h3 className="text-lg font-semibold text-white">Team Identity</h3>
+        <h3 className="text-lg font-semibold text-white">{t("settings.teamIdentity")}</h3>
         <p className="mt-1 text-sm text-gray-300">
           {isCaptain
-            ? "Manage your team display name shown throughout the app."
-            : "Only captains can edit team identity."}
+            ? t("settings.teamIdentityDesc")
+            : t("settings.onlyCaptEdit")}
         </p>
 
         <form onSubmit={handleTeamSubmit} className="mt-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-300">
-                Team Number
+                {t("settings.teamNumber")}
               </label>
               <div className="mt-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white">
-                {org.teamNumber ?? "Not set"}
+                {org.teamNumber ?? t("common.notSet")}
               </div>
             </div>
             <div>
               <label htmlFor="teamName" className="block text-sm font-medium text-gray-300">
-                Team Name
+                {t("settings.teamName")}
               </label>
               <input
                 id="teamName"
@@ -463,7 +466,7 @@ export function TeamSettingsForm({
               disabled={teamLoading || teamName === org.name}
               className="rounded-lg bg-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-400 disabled:opacity-50"
             >
-              {teamLoading ? "Saving..." : "Save team name"}
+              {teamLoading ? t("common.saving") : t("settings.saveTeamName")}
             </button>
           )}
         </form>
@@ -473,9 +476,9 @@ export function TeamSettingsForm({
         <div className="rounded-2xl dashboard-panel dashboard-card p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-white">Members & Permissions</h3>
+              <h3 className="text-lg font-semibold text-white">{t("settings.membersPermissions")}</h3>
               <p className="mt-0.5 text-sm text-gray-400">
-                {members.length} member{members.length !== 1 ? "s" : ""} on this team
+                {t("settings.memberCount", { count: members.length, s: members.length !== 1 ? "s" : "" })}
               </p>
             </div>
             <div className="relative">
@@ -496,7 +499,7 @@ export function TeamSettingsForm({
               </svg>
               <input
                 type="text"
-                placeholder="Search members..."
+                placeholder={t("settings.searchMembers")}
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
                 className="h-8 rounded-lg border border-white/10 bg-white/[0.03] pl-8 pr-3 text-xs text-white placeholder:text-gray-600 focus:border-white/20 focus:outline-none focus:ring-1 focus:ring-teal-500/30 transition"
@@ -506,7 +509,7 @@ export function TeamSettingsForm({
 
           <div className="mt-5 divide-y divide-white/[0.06] rounded-xl border border-white/10 overflow-hidden">
             {members.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-gray-400">No members found.</p>
+              <p className="px-4 py-4 text-sm text-gray-400">{t("settings.noMembers")}</p>
             ) : (
               (() => {
                 const sorted = [...members].sort((a, b) => {
@@ -523,7 +526,7 @@ export function TeamSettingsForm({
                 if (filtered.length === 0) {
                   return (
                     <p className="px-4 py-4 text-sm text-gray-500">
-                      No members match &ldquo;{memberSearch}&rdquo;.
+                      {t("settings.noMembersMatch")} &ldquo;{memberSearch}&rdquo;.
                     </p>
                   );
                 }
@@ -538,7 +541,11 @@ export function TeamSettingsForm({
                     <div key={member.id}>
                       <form
                         onSubmit={handleMemberRoleSubmit}
-                        className="flex flex-wrap items-center justify-between gap-3 bg-white/[0.01] px-4 py-3 transition hover:bg-white/[0.03]"
+                        className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition ${
+                          isCurrentUser
+                            ? "bg-white/[0.08] hover:bg-white/[0.12]"
+                            : "bg-white/[0.01] hover:bg-white/[0.03]"
+                        }`}
                       >
                         <input type="hidden" name="memberId" value={member.id} />
 
@@ -549,7 +556,7 @@ export function TeamSettingsForm({
                               <p className="text-sm font-medium text-white truncate">{member.display_name}</p>
                               {isCurrentUser && (
                                 <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                                  You
+                                  {t("settings.youBadge")}
                                 </span>
                               )}
                               <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
@@ -557,7 +564,7 @@ export function TeamSettingsForm({
                                   ? "bg-teal-500/15 text-teal-300"
                                   : "bg-white/[0.06] text-gray-400"
                               }`}>
-                                {isCaptainRole ? "Captain" : "Scout"}
+                                {isCaptainRole ? t("settings.captain") : t("settings.scout")}
                               </span>
                             </div>
                             <p className="text-xs text-gray-500">{formatJoinedDate(member.created_at)}</p>
@@ -570,14 +577,14 @@ export function TeamSettingsForm({
                             defaultValue={member.role}
                             className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-1.5 text-xs font-medium text-white dashboard-input focus:outline-none focus:ring-1 focus:ring-teal-500/40"
                           >
-                            <option value="scout">Scout</option>
-                            <option value="captain">Captain</option>
+                            <option value="scout">{t("settings.scout")}</option>
+                            <option value="captain">{t("settings.captain")}</option>
                           </select>
                           <button
                             type="submit"
                             className="rounded-lg bg-teal-500/15 border border-teal-500/25 px-3 py-1.5 text-xs font-semibold text-teal-300 transition hover:bg-teal-500/25 hover:border-teal-400/40"
                           >
-                            Save
+                            {t("common.save")}
                           </button>
                           {isCurrentUser ? (
                             <div className="w-[27px]" />
@@ -622,9 +629,9 @@ export function TeamSettingsForm({
       )}
 
       <div className="rounded-2xl dashboard-panel dashboard-card p-6">
-        <h3 className="text-lg font-semibold text-white">Join Access</h3>
+        <h3 className="text-lg font-semibold text-white">{t("settings.joinAccess")}</h3>
         <p className="mt-1 text-sm text-gray-300">
-          Share this code with teammates to let them join your team.
+          {t("settings.joinAccessDesc")}
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -636,13 +643,13 @@ export function TeamSettingsForm({
             onClick={handleCopyCode}
             className="rounded-lg border border-white/10 px-3 py-2 text-sm text-gray-200 hover:bg-white/10"
           >
-            {copied ? "Copied!" : "Copy code"}
+            {copied ? t("settings.copied") : t("settings.copyCode")}
           </button>
         </div>
       </div>
 
       <div className="rounded-2xl dashboard-panel dashboard-card p-6">
-        <h3 className="text-lg font-semibold text-white">Plan & Billing</h3>
+        <h3 className="text-lg font-semibold text-white">{t("settings.planBilling")}</h3>
         <p className="mt-1 text-sm text-gray-300">
           {isGiftedSupporter
             ? "Team-wide usage limits and gifted Supporter access details."
@@ -651,7 +658,7 @@ export function TeamSettingsForm({
 
         <div className="mt-4 space-y-3">
           <div className="rounded-lg border border-white/10 bg-gray-950/60 p-4">
-            <p className="text-sm text-gray-300">Current plan</p>
+            <p className="text-sm text-gray-300">{t("settings.currentPlan")}</p>
             <p className="mt-1 text-lg font-semibold text-white">
               {planLabel}
             </p>
@@ -661,7 +668,7 @@ export function TeamSettingsForm({
           {isCaptain && !isGiftedSupporter && (
             <div className="rounded-lg border border-white/10 bg-gray-950/60 p-4">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm text-gray-300">Billing status</p>
+                <p className="text-sm text-gray-300">{t("settings.billingStatus")}</p>
                 {billingOverview?.subscription ? (
                   <span
                     className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${statusBadgeClass(
@@ -672,14 +679,14 @@ export function TeamSettingsForm({
                   </span>
                 ) : (
                   <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-200">
-                    No subscription
+                    {t("settings.noSubscription")}
                   </span>
                 )}
               </div>
 
               {!billingOverview?.stripeConfigured ? (
                 <p className="mt-2 text-xs text-amber-200">
-                  Stripe is not fully configured on the server yet.
+                  {t("settings.stripeNotConfigured")}
                 </p>
               ) : billingOverview.error ? (
                 <p className="mt-2 text-xs text-red-300">{billingOverview.error}</p>
@@ -692,27 +699,27 @@ export function TeamSettingsForm({
                       {formatBillingDate(billingOverview.subscription.currentPeriodEnd)}
                     </p>
                   ) : (
-                    <p>Current period dates are still syncing from billing provider.</p>
+                    <p>{t("settings.periodSyncing")}</p>
                   )}
                   <p>
-                    Renewal behavior:{" "}
+                    {t("settings.renewalBehavior")}{" "}
                     {billingOverview.subscription.cancelAtPeriodEnd
-                      ? "Cancels at period end"
-                      : "Auto-renews"}
+                      ? t("settings.cancelsAtEnd")
+                      : t("settings.autoRenews")}
                   </p>
                   {billingOverview.subscription.cancelAt && (
-                    <p>Cancellation date: {formatBillingDate(billingOverview.subscription.cancelAt)}</p>
+                    <p>{t("settings.cancellationDate")} {formatBillingDate(billingOverview.subscription.cancelAt)}</p>
                   )}
                 </div>
               ) : (
                 <p className="mt-2 text-xs text-gray-400">
-                  No subscription has been created for this team yet.
+                  {t("settings.noSubscriptionYet")}
                 </p>
               )}
 
               <div className="mt-3 border-t border-white/10 pt-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-300">
-                  Recent invoices
+                  {t("settings.recentInvoices")}
                 </p>
                 {billingOverview && billingOverview.invoices.length > 0 ? (
                   <ul className="mt-2 space-y-1.5 text-xs text-gray-300">
@@ -742,7 +749,7 @@ export function TeamSettingsForm({
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-2 text-xs text-gray-400">No invoices yet.</p>
+                  <p className="mt-2 text-xs text-gray-400">{t("settings.noInvoices")}</p>
                 )}
               </div>
             </div>
@@ -750,7 +757,7 @@ export function TeamSettingsForm({
 
           {isCaptain && isGiftedSupporter && (
             <div className="rounded-lg border border-emerald-400/25 bg-emerald-500/10 p-4">
-              <p className="text-sm font-semibold text-emerald-200">Gifted Supporter access</p>
+              <p className="text-sm font-semibold text-emerald-200">{t("settings.giftedSupporter")}</p>
               <p className="mt-1 text-xs text-emerald-100/90">
                 Enjoy complimentary Supporter access as a thank-you from our team for helping us
                 test PitPilot early. No billing setup is required.
@@ -772,7 +779,7 @@ export function TeamSettingsForm({
                     onClick={() => void handleUpgradeCheckout()}
                     className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-500 disabled:opacity-50"
                   >
-                    {planLoading ? "Redirecting..." : "Upgrade to Supporter"}
+                    {planLoading ? t("common.redirecting") : t("settings.upgradeToSupporter")}
                   </button>
                 ) : (
                   <button
@@ -781,29 +788,39 @@ export function TeamSettingsForm({
                     onClick={() => void handleManageBilling()}
                     className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-gray-200 transition hover:bg-white/10 disabled:opacity-50"
                   >
-                    {planLoading ? "Redirecting..." : "Manage billing"}
+                    {planLoading ? t("common.redirecting") : t("settings.manageBilling")}
                   </button>
                 )}
                 <p className="text-xs text-gray-400">
-                  Billing runs through Stripe checkout and customer portal.
+                  {t("settings.billingRuns")}
                 </p>
               </div>
             )
           ) : (
             <p className="text-sm text-gray-400">
-              Only captains can change plans.
+              {t("settings.onlyCaptainPlans")}
             </p>
           )}
 
         </div>
       </div>
 
+      {/* Leave team section */}
+      <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6">
+        <h3 className="text-lg font-semibold text-red-200">{t("settings.leaveTeam")}</h3>
+        <p className="mt-1 text-sm text-red-100/95">
+          {t("settings.leaveTeamWarning")}
+        </p>
+        <div className="mt-4">
+          <LeaveTeamButton />
+        </div>
+      </div>
+
       {isCaptain && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6">
-          <h3 className="text-lg font-semibold text-red-200">Danger Zone</h3>
+          <h3 className="text-lg font-semibold text-red-200">{t("settings.dangerZone")}</h3>
           <p className="mt-1 text-sm text-red-100/95">
-            Delete this team and remove every member from it. This action is
-            permanent.
+            {t("settings.deleteTeamWarning")}
           </p>
           <div className="mt-4">
             <DeleteTeamButton />
@@ -813,14 +830,14 @@ export function TeamSettingsForm({
 
       <ConfirmDialog
         open={!!kickCandidate}
-        title="Remove member from team?"
+        title={t("settings.removeConfirm")}
         description={
           kickCandidate
-            ? `${kickCandidate.name} will lose access to this team's scouting data until they rejoin with a valid join code.`
+            ? t("settings.removeWarning", { name: kickCandidate.name })
             : undefined
         }
-        confirmLabel={kickLoadingMemberId ? "Removing..." : "Remove member"}
-        cancelLabel="Cancel"
+        confirmLabel={kickLoadingMemberId ? t("common.removing") : t("settings.removeMember")}
+        cancelLabel={t("common.cancel")}
         tone="danger"
         confirmDisabled={kickLoadingMemberId !== null}
         onConfirm={() => {

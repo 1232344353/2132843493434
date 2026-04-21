@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { chatCompletionWithUsage } from "@/lib/openai";
+import {
+  chatCompletionWithUsage,
+  getRequiredOpenAiApiKey,
+  toClientFacingOpenAiError,
+} from "@/lib/openai";
 import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 import { summarizeExtraScoutingSignals } from "@/lib/scouting-ai-insights";
 import { createClient } from "@/lib/supabase/server";
@@ -200,10 +204,12 @@ function normalizePickListRoles(content: PickListContent): PickListContent {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  let apiKey: string;
+  try {
+    apiKey = getRequiredOpenAiApiKey();
+  } catch (error) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY not configured" },
+      { error: toClientFacingOpenAiError(error) },
       { status: 500 }
     );
   }
@@ -577,7 +583,9 @@ IMPORTANT:
       { headers: consumedHeaders }
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: toClientFacingOpenAiError(err) },
+      { status: 500 }
+    );
   }
 }

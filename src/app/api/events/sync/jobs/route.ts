@@ -18,7 +18,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const EVENT_SYNC_RATE_LIMIT_MAX = 2;
-const STATS_SYNC_RATE_LIMIT_MAX = 1;
+const STATS_SYNC_RATE_LIMIT_MAX = 2;
 type SyncJobMode = "full" | "stats";
 
 export async function POST(request: Request) {

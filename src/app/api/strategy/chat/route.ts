@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getRequiredOpenAiApiKey,
+  toClientFacingOpenAiError,
+} from "@/lib/openai";
 import { createClient } from "@/lib/supabase/server";
 import { getEffectiveEventFormConfig } from "@/lib/event-form-config";
 import { summarizeExtraScoutingSignals } from "@/lib/scouting-ai-insights";
@@ -52,10 +56,12 @@ function extractDeltaText(deltaContent: unknown): string {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
+  let apiKey: string;
+  try {
+    apiKey = getRequiredOpenAiApiKey();
+  } catch (error) {
     return NextResponse.json(
-      { error: "OPENAI_API_KEY not configured" },
+      { error: toClientFacingOpenAiError(error) },
       { status: 500 }
     );
   }
@@ -334,7 +340,11 @@ Rules:
 
     if (!upstream) {
       return NextResponse.json(
-        { error: `AI service error: ${lastError || "all model attempts failed"}` },
+        {
+          error: toClientFacingOpenAiError(
+            lastError || "OpenAI request failed for all model attempts."
+          ),
+        },
         { status: 502, headers: limitHeaders }
       );
     }
@@ -422,7 +432,9 @@ Rules:
       },
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json(
+      { error: toClientFacingOpenAiError(err) },
+      { status: 500 }
+    );
   }
 }

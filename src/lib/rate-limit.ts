@@ -15,8 +15,8 @@ export type PlanTier = "free" | "supporter";
 
 export const TEAM_AI_WINDOW_MS = 3 * 60 * 60 * 1000;
 export const TEAM_AI_LIMITS: Record<PlanTier, number> = {
-  free: 9000,
-  supporter: 16000,
+  free: 15000,
+  supporter: 30000,
 };
 export const TEAM_AI_RATE_LIMIT_PREFIX = "ai-tokens:";
 

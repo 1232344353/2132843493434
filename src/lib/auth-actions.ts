@@ -390,15 +390,27 @@ export async function leaveOrganization() {
   }
 
   if (profile.role === "captain") {
-    const { count } = await supabase
+    const { count: captainCount } = await supabase
       .from("profiles")
       .select("id", { count: "exact", head: true })
       .eq("org_id", profile.org_id)
       .eq("role", "captain");
 
-    if ((count ?? 0) <= 1) {
+    if ((captainCount ?? 0) <= 1) {
+      // Check if there are other members
+      const { count: totalMembers } = await supabase
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", profile.org_id);
+
+      if ((totalMembers ?? 0) <= 1) {
+        return {
+          error: "You are the only member of your team. Delete the team instead of leaving.",
+        } as const;
+      }
+
       return {
-        error: "Assign another captain before leaving your team.",
+        error: "You are the only captain. Promote another member to captain before leaving.",
       } as const;
     }
   }

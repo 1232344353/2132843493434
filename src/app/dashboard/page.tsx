@@ -53,16 +53,6 @@ function formatDate(value?: string | null) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-
-function compLabel(compLevel: string, matchNumber: number, setNumber?: number | null) {
-  const hasLegacy = compLevel !== "qm" && !setNumber && matchNumber >= 100;
-  const normalizedSet = hasLegacy ? Math.floor(matchNumber / 100) : setNumber ?? null;
-  const normalizedMatch = hasLegacy ? matchNumber % 100 : matchNumber;
-  if (compLevel === "qm") return `Qual ${normalizedMatch}`;
-  const prefix = compLevel === "sf" ? "SF" : compLevel === "f" ? "F" : compLevel.toUpperCase();
-  return normalizedSet ? `${prefix} ${normalizedSet}-${normalizedMatch}` : `${prefix} ${normalizedMatch}`;
-}
-
 function getEventStatus(startDate: string | null, endDate: string | null) {
   if (!startDate) return null;
   const now = new Date();
@@ -120,29 +110,31 @@ export default async function DashboardPage() {
 
   const [
     { count: memberCount },
+    { count: memberWeekCount },
     { count: scoutingCount },
     { count: scoutingWeekCount },
-    { data: reportPreview },
-    { data: leaderboardRaw },
+    { count: eventsWeekCount },
+    { data: matchLeaderboardRaw },
+    { data: pitLeaderboardRaw },
   ] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("org_id", profile.org_id),
+    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("org_id", profile.org_id).gte("created_at", weekAgo),
     supabase.from("scouting_entries").select("*", { count: "exact", head: true }).eq("org_id", profile.org_id),
     supabase.from("scouting_entries").select("*", { count: "exact", head: true }).eq("org_id", profile.org_id).gte("created_at", weekAgo),
-    supabase
-      .from("scouting_entries")
-      .select("id, created_at, team_number, match_id, auto_score, teleop_score, endgame_score, notes, profiles(display_name), matches(comp_level, match_number, set_number, events(name, year, tba_key))")
-      .eq("org_id", profile.org_id)
-      .order("created_at", { ascending: false })
-      .limit(5),
+    supabase.from("org_events").select("*", { count: "exact", head: true }).eq("org_id", profile.org_id).gte("created_at", weekAgo),
     supabase
       .from("scouting_entries")
       .select("scouted_by, profiles(display_name)")
       .eq("org_id", profile.org_id),
+    supabase
+      .from("pit_scout_entries")
+      .select("scouted_by, profiles(display_name)")
+      .eq("org_id", profile.org_id),
   ]);
 
-  // Build leaderboard: count entries per scout
+  // Build leaderboard: count entries per scout (both match and pit scouts)
   const scoutCounts = new Map<string, { name: string; count: number }>();
-  for (const entry of leaderboardRaw ?? []) {
+  for (const entry of [...(matchLeaderboardRaw ?? []), ...(pitLeaderboardRaw ?? [])] ) {
     const p = Array.isArray(entry.profiles) ? entry.profiles[0] : entry.profiles;
     const name = (p as { display_name?: string | null } | null)?.display_name ?? "Scout";
     const existing = scoutCounts.get(entry.scouted_by);
@@ -170,7 +162,7 @@ export default async function DashboardPage() {
             <div className="relative">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-widest text-teal-400">
-                  {org?.team_number ? `Team ${org.team_number}` : org?.name}
+                  {org?.name}
                 </p>
                 {planTier !== "free" && (
                   <span
@@ -182,10 +174,10 @@ export default async function DashboardPage() {
                 )}
               </div>
               <h1 className="mt-1 text-xl font-bold text-white">
-                Welcome back, {profile.display_name ?? "Scout"}.
+                {t("dashboard.welcomeBackGreeting", { name: profile.display_name ?? "Scout" })}
               </h1>
               <p className="mt-0.5 text-sm text-gray-400">
-                Sync events and keep scouting data flowing for the next match.
+                {t("dashboard.welcomeBackSub")}
               </p>
               <UsageLimitMeter
                 limit={currentPlanAiLimit}
@@ -198,6 +190,7 @@ export default async function DashboardPage() {
 
         {/* ── Pinned Event Hero ── */}
         <AnimateIn delay={0} className="mb-6">
+          <div data-tour="pinned-event">
           {pinnedEvent ? (
             <PinnedEventHero
               event={{
@@ -225,10 +218,10 @@ export default async function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-gray-300 transition group-hover:text-white">
-                    No event pinned
+                    {t("dashboard.noEventPinned")}
                   </p>
                   <p className="text-xs text-gray-500">
-                    Go to Events, sync a competition, and pin it to see it here.
+                    {t("dashboard.pinEventInstructions")}
                   </p>
                 </div>
               </div>
@@ -237,15 +230,17 @@ export default async function DashboardPage() {
               </svg>
             </Link>
           )}
+          </div>
         </AnimateIn>
 
         {/* ── Stats row ── */}
         <StaggerGroup className="mb-8 grid grid-cols-3 gap-3">
           {[
             {
+              id: "events",
               label: t("dashboard.eventsSynced"),
               value: eventsCount,
-              weekDelta: null,
+              weekDelta: eventsWeekCount ?? 0,
               icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
@@ -253,9 +248,10 @@ export default async function DashboardPage() {
               ),
             },
             {
+              id: "members",
               label: t("dashboard.teamMembers"),
               value: memberCount ?? 0,
-              weekDelta: null,
+              weekDelta: memberWeekCount ?? 0,
               icon: (
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
@@ -263,6 +259,7 @@ export default async function DashboardPage() {
               ),
             },
             {
+              id: "entries",
               label: t("dashboard.scoutingEntries"),
               value: scoutingCount ?? 0,
               weekDelta: scoutingWeekCount ?? 0,
@@ -274,7 +271,7 @@ export default async function DashboardPage() {
             },
           ].map((stat) => (
             <StaggerChild
-              key={stat.label}
+              key={stat.id}
               className="flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition hover:border-white/10"
             >
               <div className="flex items-center gap-1.5">
@@ -297,100 +294,14 @@ export default async function DashboardPage() {
           ))}
         </StaggerGroup>
 
-        {/* ── Scouting Reports ── */}
-        <AnimateIn delay={0.2} className="space-y-4">
-          <div data-tour="scouting-reports" className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-semibold text-white">{t("dashboard.scoutingReports")}</h3>
-              <p className="text-xs text-gray-400">{t("dashboard.latestEntries")}</p>
-            </div>
-            <Link
-              href="/dashboard/reports"
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 transition hover:border-white/20 hover:bg-white/5"
-            >
-              {t("dashboard.viewAll")}
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </Link>
-          </div>
-
-          {reportPreview && reportPreview.length > 0 ? (
-            <div className="flex gap-4 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
-              {reportPreview.map((report) => {
-                const match = Array.isArray(report.matches) ? report.matches[0] : report.matches;
-                const event = match ? (Array.isArray(match.events) ? match.events[0] : match.events) : null;
-                const eventTitle = event?.year ? `${event.year} ${event.name}` : event?.name ?? "Event";
-                const reportProfile = Array.isArray(report.profiles) ? report.profiles[0] : report.profiles;
-                const scouterName = reportProfile?.display_name ?? "Teammate";
-                const matchLabel =
-                  match?.comp_level && match?.match_number
-                    ? compLabel(match.comp_level, match.match_number, match.set_number)
-                    : "Match";
-
-                return (
-                  <div
-                    key={report.id}
-                    className="min-w-[260px] max-w-[280px] flex-shrink-0 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 transition hover:border-white/10"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-gray-500">{eventTitle}</p>
-                      <h4 className="text-base font-semibold text-white">Team {report.team_number}</h4>
-                      <p className="text-xs text-gray-500">
-                        {matchLabel} · {formatDate(report.created_at)}
-                      </p>
-                    </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      {t("dashboard.scoutedBy", { name: scouterName })}
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Link
-                        href={`/scout/${report.match_id}/${report.team_number}`}
-                        className="flex items-center gap-1 rounded-full border border-teal-500/20 bg-teal-500/10 px-2.5 py-1 text-xs font-semibold text-teal-300 transition hover:bg-teal-500/15"
-                      >
-                        {t("dashboard.review")}
-                        <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="9 18 15 12 9 6" />
-                        </svg>
-                      </Link>
-                      {event?.tba_key && (
-                        <Link
-                          href={`/dashboard/events/${event.tba_key}`}
-                          className="flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-1 text-xs font-semibold text-gray-400 transition hover:border-white/20 hover:text-gray-200"
-                        >
-                          {t("dashboard.event")}
-                          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="9 18 15 12 9 6" />
-                          </svg>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-gray-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                  <polyline points="14 2 14 8 20 8" />
-                </svg>
-              </div>
-              <p className="text-sm font-medium text-gray-300">{t("dashboard.noReports")}</p>
-              <p className="mt-1 text-xs text-gray-500">{t("dashboard.noReportsSub")}</p>
-            </div>
-          )}
-        </AnimateIn>
-
         {/* ── Scouting Leaderboard ── */}
         {leaderboard.length > 0 && (
           <AnimateIn delay={0.35} className="mt-8">
-            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
+            <div data-tour="scout-leaderboard" className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden">
               <div className="flex items-center justify-between border-b border-white/[0.05] px-5 py-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-white">Scout Leaderboard</h3>
-                  <p className="text-xs text-gray-400">Total entries submitted this season</p>
+                  <h3 className="text-sm font-semibold text-white">{t("dashboard.scoutLeaderboard")}</h3>
+                  <p className="text-xs text-gray-400">{t("dashboard.leaderboardDesc")}</p>
                 </div>
               </div>
               <div className="divide-y divide-white/[0.04]">

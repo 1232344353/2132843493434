@@ -44,6 +44,53 @@ export async function deleteAllScoutingReports() {
   return { success: true } as const;
 }
 
+export async function deleteEventScoutingReports(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" } as const;
+
+  const eventId = (formData.get("eventId") as string | null)?.trim();
+  if (!eventId) return { error: "Missing eventId" } as const;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("org_id, role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.org_id) return { error: "No organization found." } as const;
+  if (profile.role !== "captain") return { error: "Only captains can delete reports." } as const;
+
+  const admin = createAdminClient();
+
+  const { data: matches } = await admin
+    .from("matches")
+    .select("id")
+    .eq("event_id", eventId);
+  const matchIds = (matches ?? []).map((m) => m.id);
+
+  if (matchIds.length > 0) {
+    await admin
+      .from("scouting_entries")
+      .delete()
+      .eq("org_id", profile.org_id)
+      .in("match_id", matchIds);
+  }
+
+  await admin
+    .from("pit_scout_entries")
+    .delete()
+    .eq("org_id", profile.org_id)
+    .eq("event_id", eventId);
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/reports");
+  return { success: true } as const;
+}
+
 export async function deleteScoutingReport(formData: FormData) {
   const supabase = await createClient();
   const {
